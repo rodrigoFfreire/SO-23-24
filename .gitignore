@@ -4,5 +4,5 @@
 
 # Binaries, objects, tests
 jobs
-.o
+*.o
 ems

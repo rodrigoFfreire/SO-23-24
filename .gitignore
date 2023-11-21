@@ -1,0 +1,8 @@
+# Random Files
+*.pdf
+.DS_STORE
+
+# Binaries, objects, tests
+jobs
+.o
+ems

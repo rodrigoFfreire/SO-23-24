@@ -2,7 +2,8 @@
 *.pdf
 .DS_STORE
 
-# Binaries, objects, tests
+# Binaries, objects, jobs, tests
 jobs
 *.o
 ems
+test

@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <string.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 
 #include "constants.h"
 #include "operations.h"

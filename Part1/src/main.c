@@ -10,6 +10,8 @@
 #include "constants.h"
 #include "operations.h"
 #include "parser.h"
+#include "utils.h"
+
 
 int main(int argc, char *argv[]) {
   unsigned int state_access_delay_ms = STATE_ACCESS_DELAY_MS;
@@ -56,7 +58,7 @@ int main(int argc, char *argv[]) {
 
       char job_filepath[256];
       char out_filepath[256];
-      parse_jobpaths(job_filepath, out_filepath, job_dir, dir_entry->d_name);
+      get_job_paths(job_filepath, out_filepath, job_dir, dir_entry->d_name);
       int job_fd = open(job_filepath, O_RDONLY);
       if (job_fd < 0) {
         fprintf(stderr, "Failed to open %s file\n", job_filepath);

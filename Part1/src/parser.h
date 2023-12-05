@@ -51,4 +51,11 @@ int parse_show(int fd, unsigned int *event_id);
 /// @return 0 if no thread was specified, 1 if a thread was specified, -1 on error.
 int parse_wait(int fd, unsigned int *delay, unsigned int *thread_id);
 
+/// Parses the name of the file and modifies the extension to .out.
+/// @param job_filepath Path for the .job file.
+/// @param out_filepath Path for the .out file.
+/// @param dir Jobs directory name.
+/// @param filename File named read from readdir().
+void parse_jobpaths(char *job_file, char *out_file, char *dir, char *filename);
+
 #endif  // EMS_PARSER_H

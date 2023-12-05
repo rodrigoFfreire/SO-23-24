@@ -23,6 +23,7 @@ run: ems
 
 clean: cleanjobs
 	@$(RM) -f *.o ems
+	@$(RM) -rf *.dSYM
 
 cleanjobs:
 	@$(RM) jobs/*.out

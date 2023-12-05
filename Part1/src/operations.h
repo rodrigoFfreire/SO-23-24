@@ -26,10 +26,11 @@ int ems_create(unsigned int event_id, size_t num_rows, size_t num_cols);
 /// @return 0 if the reservation was created successfully, 1 otherwise.
 int ems_reserve(unsigned int event_id, size_t num_seats, size_t *xs, size_t *ys);
 
-/// Prints the given event.
+/// Outputs the given event to the file descriptor.
 /// @param event_id Id of the event to print.
+/// @param out_fd Output file descriptor
 /// @return 0 if the event was printed successfully, 1 otherwise.
-int ems_show(unsigned int event_id);
+int ems_show(unsigned int event_id, int out_fd);
 
 /// Prints all the events.
 /// @return 0 if the events were printed successfully, 1 otherwise.

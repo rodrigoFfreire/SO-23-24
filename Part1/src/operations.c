@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "eventlist.h"
 
@@ -157,8 +159,6 @@ int ems_reserve(unsigned int event_id, size_t num_seats, size_t* xs, size_t* ys)
 }
 
 int ems_show(unsigned int event_id, int out_fd) {
-  // TODO write to out_fd instead of printf
-  printf("Just to shutup the compiler about unused value: %d\n", out_fd);
   if (event_list == NULL) {
     fprintf(stderr, "EMS state must be initialized\n");
     return 1;
@@ -171,17 +171,33 @@ int ems_show(unsigned int event_id, int out_fd) {
     return 1;
   }
 
+  char buffer[BUFSIZ];
   for (size_t i = 1; i <= event->rows; i++) {
+    size_t n_bytes = 0;
     for (size_t j = 1; j <= event->cols; j++) {
       unsigned int* seat = get_seat_with_delay(event, seat_index(event, i, j));
-      printf("%u", *seat);
+      int processed_bytes = -1;
 
       if (j < event->cols) {
-        printf(" ");
+        processed_bytes = snprintf(buffer + n_bytes, BUFSIZ - n_bytes, "%u ", *seat);
+      } else {
+        processed_bytes = snprintf(buffer + n_bytes, BUFSIZ - n_bytes, "%u", *seat);
       }
+      if (processed_bytes < 0) {
+        fprintf(stderr, "Could not add seat to buffer\n");
+        return 1;
+      }
+      n_bytes += (size_t)processed_bytes;
     }
-
-    printf("\n");
+    strcat(buffer, "\n");
+    n_bytes++;
+    
+    ssize_t wbytes = write(out_fd, buffer, n_bytes);
+    if (wbytes < 0) {
+      fprintf(stderr, "Could not write to .out file\n");
+      return 1;
+    }
+    memset(buffer, 0, n_bytes);
   }
 
   return 0;

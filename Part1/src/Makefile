@@ -21,8 +21,10 @@ ems: main.c constants.h operations.o parser.o eventlist.o
 run: ems
 	@./ems
 
-clean:
+clean: cleanjobs
 	@$(RM) -f *.o ems
+
+cleanjobs:
 	@$(RM) jobs/*.out
 
 format:

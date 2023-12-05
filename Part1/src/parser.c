@@ -261,8 +261,8 @@ int parse_wait(int fd, unsigned int *delay, unsigned int *thread_id) {
 void parse_jobpaths(char *job_file, char *out_file, char *dir, char *filename) {
   strcpy(job_file, dir);
   strcpy(out_file, dir);
-  strcpy(job_file, filename);
-  strcpy(out_file, filename);
+  strcat(job_file, filename);
+  strcat(out_file, filename);
 
   char *ext = strchr(out_file, '.');
   if (NULL != ext) {

@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
         continue;
       }
 
-      int out_fd = open(out_filepath, O_WRONLY | O_CREAT | O_TRUNC);
+      int out_fd = open(out_filepath, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
       if (out_fd < 0) {
         fprintf(stderr, "Failed to open %s file\n", out_filepath);
         close(job_fd);

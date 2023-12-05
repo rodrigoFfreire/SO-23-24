@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
   DIR *dir = opendir(argv[1]);
   if (NULL == dir) {
     fprintf(stderr, "Failed to open jobs directory\n");
-    closedir(dir);
+    ems_terminate();
     return 1;
   }
   char job_dir[256];
@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
 
   while ((dir_entry = readdir(dir)) != NULL) {
     if (strcmp(".", dir_entry->d_name) && strcmp("..", dir_entry->d_name) &&
-        strstr(dir_entry->d_name, ".jobs")) {
+        !strcmp(JOBS_FILE_EXTENSION, strchr(dir_entry->d_name, '.'))) {
       size_t num_rows, num_columns, num_coords;
       size_t xs[MAX_RESERVATION_SIZE], ys[MAX_RESERVATION_SIZE];
       unsigned int event_id, delay;

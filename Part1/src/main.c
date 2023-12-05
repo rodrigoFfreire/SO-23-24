@@ -70,10 +70,7 @@ int main(int argc, char *argv[]) {
         close(job_fd);
         close(out_fd);
         continue;
-      } 
-
-      printf("> ");
-      fflush(stdout);
+      }
 
       int eof = 0;
       while (!eof) {

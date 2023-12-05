@@ -1,6 +1,7 @@
-# Random Files
+# Random Files and Directories
 *.pdf
 .DS_STORE
+.vscode
 
 # Binaries, objects, jobs, tests
 jobs

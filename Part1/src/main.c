@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
   }
   char job_dir[256];
   strcpy(job_dir, argv[1]);
-  strcat(job_dir, '/');
+  strcat(job_dir, "/");
 
   while ((dir_entry = readdir(dir)) != NULL) {
     if (strcmp(".", dir_entry->d_name) && strcmp("..", dir_entry->d_name) &&
@@ -59,14 +59,14 @@ int main(int argc, char *argv[]) {
 
       int job_fd = open(job_filepath, O_RDONLY);
       if (job_fd < 0) {
-        fprintf(stderr, "Failed to open %s file", job_filepath);
+        fprintf(stderr, "Failed to open %s file\n", job_filepath);
         close(job_fd);
         continue;
       }
 
       int out_fd = open(out_filepath, O_WRONLY | O_CREAT | O_TRUNC);
       if (out_fd < 0) {
-        fprintf(stderr, "Failed to open %s file", out_filepath);
+        fprintf(stderr, "Failed to open %s file\n", out_filepath);
         close(job_fd);
         close(out_fd);
         continue;

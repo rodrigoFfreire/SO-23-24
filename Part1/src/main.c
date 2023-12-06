@@ -49,8 +49,11 @@ int main(int argc, char *argv[]) {
   strcat(job_dir, "/");
 
   while ((dir_entry = readdir(dir)) != NULL) {
-    if (strcmp(".", dir_entry->d_name) && strcmp("..", dir_entry->d_name) &&
-        !strcmp(JOBS_FILE_EXTENSION, strchr(dir_entry->d_name, '.'))) {
+    if (strcmp(".", dir_entry->d_name) && strcmp("..", dir_entry->d_name)) {
+      char *ext = strchr(dir_entry->d_name, '.');
+      if (NULL == ext || strcmp(JOBS_FILE_EXTENSION, strchr(dir_entry->d_name, '.')))
+        continue;
+
       size_t num_rows, num_columns, num_coords;
       size_t xs[MAX_RESERVATION_SIZE], ys[MAX_RESERVATION_SIZE];
       unsigned int event_id, delay;

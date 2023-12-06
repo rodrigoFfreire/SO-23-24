@@ -180,7 +180,7 @@ int ems_show(unsigned int event_id, int out_fd) {
   char buffer[BUFSIZ];
   size_t n_bytes = 0;
   for (size_t i = 1; i <= event->rows; i++) {
-    for (size_t j = 1; j <= event->rows; j++) {
+    for (size_t j = 1; j <= event->cols; j++) {
       unsigned int *seat = get_seat_with_delay(event, seat_index(event, i, j));
 
       ssize_t added_bytes =

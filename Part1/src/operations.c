@@ -5,6 +5,8 @@
 #include <unistd.h>
 
 #include "eventlist.h"
+#include "constants.h"
+#include "utils.h"
 
 static struct EventList* event_list = NULL;
 static unsigned int state_access_delay_ms = 0;
@@ -172,32 +174,38 @@ int ems_show(unsigned int event_id, int out_fd) {
   }
 
   char buffer[BUFSIZ];
+  size_t n_bytes = 0;
   for (size_t i = 1; i <= event->rows; i++) {
-    size_t n_bytes = 0;
-    for (size_t j = 1; j <= event->cols; j++) {
+    for (size_t j = 1; j <= event->rows; j++) {
       unsigned int* seat = get_seat_with_delay(event, seat_index(event, i, j));
-      int processed_bytes = -1;
 
-      if (j < event->cols) {
-        processed_bytes = snprintf(buffer + n_bytes, BUFSIZ - n_bytes, "%u ", *seat);
-      } else {
-        processed_bytes = snprintf(buffer + n_bytes, BUFSIZ - n_bytes, "%u", *seat);
-      }
-      if (processed_bytes < 0) {
-        fprintf(stderr, "Could not add seat to buffer\n");
+      ssize_t added_bytes = snprintf(buffer + n_bytes, BUFSIZ - n_bytes, "%u", *seat);
+      if (added_bytes < 0) {
+        fprintf(stderr, "Encoding error: could not add seat to buffer\n");
         return 1;
       }
-      n_bytes += (size_t)processed_bytes;
+
+      n_bytes += (size_t) added_bytes;
+      if (j < event->cols) {
+        buffer[n_bytes++] = ' ';
+      } 
+
+      if (BUFSIZ - n_bytes <= BUFFER_FLUSH_THOLD) {
+        ssize_t flushed_bytes = write(out_fd, buffer, n_bytes);
+        if (flushed_bytes < 0) {
+          fprintf(stderr, "Could write to .out file\n");
+          return 1;
+        }
+        n_bytes = 0;
+      }
     }
-    strcat(buffer, "\n");
-    n_bytes++;
-    
-    ssize_t wbytes = write(out_fd, buffer, n_bytes);
-    if (wbytes < 0) {
+    buffer[n_bytes++] = '\n';
+  }
+
+  ssize_t wbytes = write(out_fd, buffer, n_bytes);
+  if (wbytes < 0) {
       fprintf(stderr, "Could not write to .out file\n");
       return 1;
-    }
-    memset(buffer, 0, n_bytes);
   }
 
   return 0;

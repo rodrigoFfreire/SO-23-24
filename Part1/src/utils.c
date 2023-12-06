@@ -1,5 +1,5 @@
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 void get_job_paths(char *job_file, char *out_file, char *dir, char *filename) {
   strcpy(job_file, dir);

@@ -1,14 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
-#include "eventlist.h"
 #include "constants.h"
+#include "eventlist.h"
 #include "utils.h"
 
-static struct EventList* event_list = NULL;
+static struct EventList *event_list = NULL;
 static unsigned int state_access_delay_ms = 0;
 
 /// Calculates a timespec from a delay in milliseconds.
@@ -19,24 +19,26 @@ static struct timespec delay_to_timespec(unsigned int delay_ms) {
 }
 
 /// Gets the event with the given ID from the state.
-/// @note Will wait to simulate a real system accessing a costly memory resource.
+/// @note Will wait to simulate a real system accessing a costly memory
+/// resource.
 /// @param event_id The ID of the event to get.
 /// @return Pointer to the event if found, NULL otherwise.
-static struct Event* get_event_with_delay(unsigned int event_id) {
+static struct Event *get_event_with_delay(unsigned int event_id) {
   struct timespec delay = delay_to_timespec(state_access_delay_ms);
-  nanosleep(&delay, NULL);  // Should not be removed
+  nanosleep(&delay, NULL); // Should not be removed
 
   return get_event(event_list, event_id);
 }
 
 /// Gets the seat with the given index from the state.
-/// @note Will wait to simulate a real system accessing a costly memory resource.
+/// @note Will wait to simulate a real system accessing a costly memory
+/// resource.
 /// @param event Event to get the seat from.
 /// @param index Index of the seat to get.
 /// @return Pointer to the seat.
-static unsigned int* get_seat_with_delay(struct Event* event, size_t index) {
+static unsigned int *get_seat_with_delay(struct Event *event, size_t index) {
   struct timespec delay = delay_to_timespec(state_access_delay_ms);
-  nanosleep(&delay, NULL);  // Should not be removed
+  nanosleep(&delay, NULL); // Should not be removed
 
   return &event->data[index];
 }
@@ -47,7 +49,9 @@ static unsigned int* get_seat_with_delay(struct Event* event, size_t index) {
 /// @param row Row of the seat.
 /// @param col Column of the seat.
 /// @return Index of the seat.
-static size_t seat_index(struct Event* event, size_t row, size_t col) { return (row - 1) * event->cols + col - 1; }
+static size_t seat_index(struct Event *event, size_t row, size_t col) {
+  return (row - 1) * event->cols + col - 1;
+}
 
 int ems_init(unsigned int delay_ms) {
   if (event_list != NULL) {
@@ -82,7 +86,7 @@ int ems_create(unsigned int event_id, size_t num_rows, size_t num_cols) {
     return 1;
   }
 
-  struct Event* event = malloc(sizeof(struct Event));
+  struct Event *event = malloc(sizeof(struct Event));
 
   if (event == NULL) {
     fprintf(stderr, "Error allocating memory for event\n");
@@ -115,13 +119,13 @@ int ems_create(unsigned int event_id, size_t num_rows, size_t num_cols) {
   return 0;
 }
 
-int ems_reserve(unsigned int event_id, size_t num_seats, size_t* xs, size_t* ys) {
+int ems_reserve(unsigned int event_id, size_t num_seats, size_t *xs, size_t *ys) {
   if (event_list == NULL) {
     fprintf(stderr, "EMS state must be initialized\n");
     return 1;
   }
 
-  struct Event* event = get_event_with_delay(event_id);
+  struct Event *event = get_event_with_delay(event_id);
 
   if (event == NULL) {
     fprintf(stderr, "Event not found\n");
@@ -166,7 +170,7 @@ int ems_show(unsigned int event_id, int out_fd) {
     return 1;
   }
 
-  struct Event* event = get_event_with_delay(event_id);
+  struct Event *event = get_event_with_delay(event_id);
 
   if (event == NULL) {
     fprintf(stderr, "Event not found\n");
@@ -177,18 +181,19 @@ int ems_show(unsigned int event_id, int out_fd) {
   size_t n_bytes = 0;
   for (size_t i = 1; i <= event->rows; i++) {
     for (size_t j = 1; j <= event->rows; j++) {
-      unsigned int* seat = get_seat_with_delay(event, seat_index(event, i, j));
+      unsigned int *seat = get_seat_with_delay(event, seat_index(event, i, j));
 
-      ssize_t added_bytes = snprintf(buffer + n_bytes, BUFSIZ - n_bytes, "%u", *seat);
+      ssize_t added_bytes =
+          snprintf(buffer + n_bytes, BUFSIZ - n_bytes, "%u", *seat);
       if (added_bytes < 0) {
         fprintf(stderr, "Encoding error: could not add seat to buffer\n");
         return 1;
       }
 
-      n_bytes += (size_t) added_bytes;
+      n_bytes += (size_t)added_bytes;
       if (j < event->cols) {
         buffer[n_bytes++] = ' ';
-      } 
+      }
 
       if (BUFSIZ - n_bytes <= BUFFER_FLUSH_THOLD) {
         ssize_t flushed_bytes = write(out_fd, buffer, n_bytes);
@@ -204,8 +209,8 @@ int ems_show(unsigned int event_id, int out_fd) {
 
   ssize_t wbytes = write(out_fd, buffer, n_bytes);
   if (wbytes < 0) {
-      fprintf(stderr, "Could not write to .out file\n");
-      return 1;
+    fprintf(stderr, "Could not write to .out file\n");
+    return 1;
   }
 
   return 0;
@@ -222,7 +227,7 @@ int ems_list_events() {
     return 0;
   }
 
-  struct ListNode* current = event_list->head;
+  struct ListNode *current = event_list->head;
   while (current != NULL) {
     printf("Event: ");
     printf("%u\n", (current->event)->id);

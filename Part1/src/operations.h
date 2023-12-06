@@ -40,4 +40,4 @@ int ems_list_events();
 /// @param delay_us Delay in milliseconds.
 void ems_wait(unsigned int delay_ms);
 
-#endif  // EMS_OPERATIONS_H
+#endif // EMS_OPERATIONS_H

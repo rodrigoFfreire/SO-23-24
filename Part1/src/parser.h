@@ -13,7 +13,7 @@ enum Command {
   CMD_HELP,
   CMD_EMPTY,
   CMD_INVALID,
-  EOC  // End of commands
+  EOC // End of commands
 };
 
 /// Reads a line and returns the corresponding command.
@@ -47,8 +47,10 @@ int parse_show(int fd, unsigned int *event_id);
 /// Parses a WAIT command.
 /// @param fd File descriptor to read from.
 /// @param delay Pointer to the variable to store the wait delay in.
-/// @param thread_id Pointer to the variable to store the thread ID in. May not be set.
-/// @return 0 if no thread was specified, 1 if a thread was specified, -1 on error.
+/// @param thread_id Pointer to the variable to store the thread ID in. May not
+/// be set.
+/// @return 0 if no thread was specified, 1 if a thread was specified, -1 on
+/// error.
 int parse_wait(int fd, unsigned int *delay, unsigned int *thread_id);
 
-#endif  // EMS_PARSER_H
+#endif // EMS_PARSER_H

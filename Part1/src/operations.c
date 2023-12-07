@@ -186,53 +186,64 @@ int ems_show(unsigned int event_id, int out_fd) {
       ssize_t added_bytes =
           snprintf(buffer + n_bytes, BUFSIZ - n_bytes, "%u", *seat);
       if (added_bytes < 0) {
-        fprintf(stderr, "Encoding error: could not add seat to buffer\n");
+        fprintf(stderr, "Encoding error: could not add data to buffer\n");
         return 1;
       }
 
-      n_bytes += (size_t)added_bytes;
+      n_bytes += (size_t) added_bytes;
       if (j < event->cols) {
         buffer[n_bytes++] = ' ';
       }
 
       if (BUFSIZ - n_bytes <= BUFFER_FLUSH_THOLD) {
-        ssize_t flushed_bytes = write(out_fd, buffer, n_bytes);
-        if (flushed_bytes < 0) {
-          fprintf(stderr, "Could write to .out file\n");
+        if (utilwrite(out_fd, buffer, n_bytes))
           return 1;
-        }
+
         n_bytes = 0;
       }
     }
     buffer[n_bytes++] = '\n';
   }
 
-  ssize_t wbytes = write(out_fd, buffer, n_bytes);
-  if (wbytes < 0) {
-    fprintf(stderr, "Could not write to .out file\n");
+  if (utilwrite(out_fd, buffer, n_bytes))
     return 1;
-  }
 
   return 0;
 }
 
-int ems_list_events() {
+int ems_list_events(int out_fd) {
   if (event_list == NULL) {
     fprintf(stderr, "EMS state must be initialized\n");
     return 1;
   }
 
+  char buffer[BUFSIZ];
+  size_t n_bytes = 0;
   if (event_list->head == NULL) {
-    printf("No events\n");
-    return 0;
+    strcpy(buffer, "No events\n");
+    n_bytes = strlen("No events\n");
   }
+  else {
+    struct ListNode *current = event_list->head;
+    while (current != NULL) {
+      ssize_t added_bytes = snprintf(buffer + n_bytes, BUFSIZ - n_bytes, "Event: %u\n", (current->event)->id);
+      if (added_bytes < 0) {
+        fprintf(stderr, "Encoding error: could not add data to buffer\n");
+        return 1;
+      }
+      n_bytes += (size_t) added_bytes;
 
-  struct ListNode *current = event_list->head;
-  while (current != NULL) {
-    printf("Event: ");
-    printf("%u\n", (current->event)->id);
-    current = current->next;
-  }
+      if (BUFSIZ - n_bytes <= BUFFER_FLUSH_THOLD) {
+        if (utilwrite(out_fd, buffer, n_bytes))
+          return 1;
+
+        n_bytes = 0;
+      }
+    }
+      current = current->next;
+    }
+  if (utilwrite(out_fd, buffer, n_bytes))
+    return 1;
 
   return 0;
 }

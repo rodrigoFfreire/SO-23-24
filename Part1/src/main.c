@@ -16,14 +16,14 @@ int main(int argc, char *argv[]) {
   unsigned int state_access_delay_ms = STATE_ACCESS_DELAY_MS;
   struct dirent *dir_entry;
 
-  if (argc < 2) {
-    fprintf(stderr, "Jobs directory was not specified\n");
+  if (argc < 3) {
+    fprintf(stderr, "Not enough arguments were provided\n");
     return 1;
   }
 
-  if (argc > 2) {
+  if (argc > 3) {
     char *endptr;
-    unsigned long int delay = strtoul(argv[2], &endptr, 10);
+    unsigned long int delay = strtoul(argv[3], &endptr, 10);
 
     if (*endptr != '\0' || delay > UINT_MAX) {
       fprintf(stderr, "Invalid delay value or value too large\n");
@@ -122,7 +122,7 @@ int main(int argc, char *argv[]) {
         break;
 
       case CMD_LIST_EVENTS:
-        if (ems_list_events()) {
+        if (ems_list_events(out_fd)) {
           fprintf(stderr, "Failed to list events\n");
         }
 

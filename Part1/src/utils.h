@@ -8,4 +8,12 @@
 /// @param filename File named read from readdir().
 void get_job_paths(char *job_filepath, char *out_filepath, char *dir, char *filename);
 
+
+/// Writes N_BYTES from BUFFER to OUT_FD
+/// @param out_fd Output file descriptor
+/// @param buffer Buffer
+/// @param n_bytes N bytes to write.
+int utilwrite(int out_fd, const void *buffer, size_t n_bytes);
+
+
 #endif

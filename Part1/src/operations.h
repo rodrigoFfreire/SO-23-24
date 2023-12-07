@@ -33,8 +33,9 @@ int ems_reserve(unsigned int event_id, size_t num_seats, size_t *xs, size_t *ys)
 int ems_show(unsigned int event_id, int out_fd);
 
 /// Prints all the events.
+/// @param out_fd Output file descriptor
 /// @return 0 if the events were printed successfully, 1 otherwise.
-int ems_list_events();
+int ems_list_events(int out_fd);
 
 /// Waits for a given amount of time.
 /// @param delay_us Delay in milliseconds.

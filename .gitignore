@@ -5,6 +5,7 @@
 
 # Binaries, objects, jobs, tests
 jobs
+results
 *.o
 ems
 test

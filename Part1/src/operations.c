@@ -239,9 +239,9 @@ int ems_list_events(int out_fd) {
 
         n_bytes = 0;
       }
-    }
       current = current->next;
     }
+  }
   if (utilwrite(out_fd, buffer, n_bytes))
     return 1;
 

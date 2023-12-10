@@ -22,7 +22,7 @@ struct timespec delay_to_timespec(unsigned int delay_ms) {
 /// resource.
 /// @param event_id The ID of the event to get.
 /// @return Pointer to the event if found, NULL otherwise.
-struct Event *get_event_with_delay(struct Ems *ems, unsigned int event_id) {
+struct Event *get_event_with_delay(Ems_t *ems, unsigned int event_id) {
   struct timespec delay = delay_to_timespec(ems->state_access_delay_ms);
   nanosleep(&delay, NULL); // Should not be removed
 
@@ -35,7 +35,7 @@ struct Event *get_event_with_delay(struct Ems *ems, unsigned int event_id) {
 /// @param event Event to get the seat from.
 /// @param index Index of the seat to get.
 /// @return Pointer to the seat.
-unsigned int *get_seat_with_delay(struct Ems *ems, struct Event *event, size_t index) {
+unsigned int *get_seat_with_delay(Ems_t *ems, struct Event *event, size_t index) {
   struct timespec delay = delay_to_timespec(ems->state_access_delay_ms);
   nanosleep(&delay, NULL); // Should not be removed
 
@@ -52,7 +52,7 @@ size_t seat_index(struct Event *event, size_t row, size_t col) {
   return (row - 1) * event->cols + col - 1;
 }
 
-int ems_init(struct Ems *ems, unsigned int delay_ms) {
+int ems_init(Ems_t *ems, unsigned int delay_ms) {
   if (ems->event_list != NULL) {
     fprintf(stderr, "EMS state has already been initialized\n");
     return 1;
@@ -64,7 +64,7 @@ int ems_init(struct Ems *ems, unsigned int delay_ms) {
   return ems->event_list == NULL;
 }
 
-int ems_terminate(struct Ems *ems) {
+int ems_terminate(Ems_t *ems) {
   if (ems->event_list == NULL) {
     fprintf(stderr, "EMS state must be initialized\n");
     return 1;
@@ -74,7 +74,7 @@ int ems_terminate(struct Ems *ems) {
   return 0;
 }
 
-int ems_create(struct Ems *ems, unsigned int event_id, size_t num_rows, size_t num_cols) {
+int ems_create(Ems_t *ems, unsigned int event_id, size_t num_rows, size_t num_cols) {
   if (ems->event_list == NULL) {
     fprintf(stderr, "EMS state must be initialized\n");
     return 1;
@@ -118,7 +118,7 @@ int ems_create(struct Ems *ems, unsigned int event_id, size_t num_rows, size_t n
   return 0;
 }
 
-int ems_reserve(struct Ems *ems, unsigned int event_id, size_t num_seats, size_t *xs, size_t *ys) {
+int ems_reserve(Ems_t *ems, unsigned int event_id, size_t num_seats, size_t *xs, size_t *ys) {
   if (ems->event_list == NULL) {
     fprintf(stderr, "EMS state must be initialized\n");
     return 1;
@@ -163,7 +163,7 @@ int ems_reserve(struct Ems *ems, unsigned int event_id, size_t num_seats, size_t
   return 0;
 }
 
-int ems_show(struct Ems *ems, unsigned int event_id, int out_fd) {
+int ems_show(Ems_t *ems, unsigned int event_id, int out_fd) {
   if (ems->event_list == NULL) {
     fprintf(stderr, "EMS state must be initialized\n");
     return 1;
@@ -210,7 +210,7 @@ int ems_show(struct Ems *ems, unsigned int event_id, int out_fd) {
   return 0;
 }
 
-int ems_list_events(struct Ems *ems, int out_fd) {
+int ems_list_events(Ems_t *ems, int out_fd) {
   if (ems->event_list == NULL) {
     fprintf(stderr, "EMS state must be initialized\n");
     return 1;

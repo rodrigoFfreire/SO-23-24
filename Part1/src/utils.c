@@ -24,7 +24,7 @@ int utilwrite(int out_fd, const void *buffer, size_t n_bytes) {
       fprintf(stderr, "Could not write to .out file\n");
       return 1;
     }
-    n_bytes -= wbytes;
+    n_bytes -= (size_t) wbytes;
     completed_bytes += wbytes;
   }
   return 0;

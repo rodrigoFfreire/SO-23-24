@@ -48,6 +48,7 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
   pthread_t *threads = (pthread_t*) malloc(sizeof(pthread_t) * max_threads);
 
   char eof = 0;
+  char barrier = 0;
   while (!eof) {
     while (used_threads < max_threads && !eof) {
       switch (get_next(job_fd)) {
@@ -137,13 +138,19 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
 
           break;
 
-        case CMD_BARRIER: // Not implemented
+        case CMD_BARRIER:
+          barrier = 1;
+          break;
         case CMD_EMPTY:
           break;
 
         case EOC:
           eof = 1;
           break;
+      }
+      if (barrier) {
+        barrier = 0;
+        break;
       }
     }
     for (unsigned long i = 0; i < max_threads && i < used_threads; i++) {

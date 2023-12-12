@@ -135,7 +135,7 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
               "  SHOW <event_id>\n"
               "  LIST\n"
               "  WAIT <delay_ms> [thread_id]\n" // thread_id is not implemented
-              "  BARRIER\n"                     // Not implemented
+              "  BARRIER\n"
               "  HELP\n");
 
           break;

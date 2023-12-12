@@ -73,6 +73,7 @@ int ems_terminate(Ems_t *ems) {
 
 int ems_create(Ems_t *ems, unsigned int event_id, size_t num_rows, size_t num_cols) {
   pthread_rwlock_wrlock(&lock);
+  printf("CREATING...\n");
   if (ems->event_list == NULL) {
     fprintf(stderr, "EMS state must be initialized\n");
     pthread_rwlock_unlock(&lock);
@@ -122,6 +123,7 @@ int ems_create(Ems_t *ems, unsigned int event_id, size_t num_rows, size_t num_co
 
 int ems_reserve(Ems_t *ems, unsigned int event_id, size_t num_seats, size_t *xs, size_t *ys) {
   pthread_rwlock_wrlock(&lock);
+  printf("RESERVING...\n");
   if (ems->event_list == NULL) {
     fprintf(stderr, "EMS state must be initialized\n");
     pthread_rwlock_unlock(&lock);
@@ -171,6 +173,7 @@ int ems_reserve(Ems_t *ems, unsigned int event_id, size_t num_seats, size_t *xs,
 
 int ems_show(Ems_t *ems, unsigned int event_id, int out_fd) {
   pthread_rwlock_rdlock(&lock);
+  printf("SHOWING...\n");
   if (ems->event_list == NULL) {
     fprintf(stderr, "EMS state must be initialized\n");
     pthread_rwlock_unlock(&lock);
@@ -224,6 +227,7 @@ int ems_show(Ems_t *ems, unsigned int event_id, int out_fd) {
 
 int ems_list_events(Ems_t *ems, int out_fd) {
   pthread_rwlock_rdlock(&lock);
+  printf("LISTING...\n");
   if (ems->event_list == NULL) {
     fprintf(stderr, "EMS state must be initialized\n");
     pthread_rwlock_unlock(&lock);

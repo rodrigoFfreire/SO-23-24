@@ -2,6 +2,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <time.h>
 
 void get_job_paths(char *job_file, char *out_file, char *dir, char *filename) {
   strcpy(job_file, dir);
@@ -28,4 +29,17 @@ int utilwrite(int out_fd, const void *buffer, size_t n_bytes) {
     completed_bytes += wbytes;
   }
   return 0;
+}
+
+void *safe_malloc(size_t size) {
+  void *ptr = malloc(size);
+  if (NULL == ptr) {
+    fprintf(stderr, "Could not allocate memory\n");
+    return NULL;
+  }
+  return ptr;
+}
+
+struct timespec delay_to_timespec(unsigned int delay_ms) {
+  return (struct timespec){delay_ms / 1000, (delay_ms % 1000) * 1000000};
 }

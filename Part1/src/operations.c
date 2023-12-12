@@ -260,11 +260,12 @@ int ems_list_events(Ems_t *ems, int out_fd) {
       }
       current = current->next;
     }
-    if (utilwrite(out_fd, buffer, n_bytes)) {
-      pthread_rwlock_unlock(&lock);
-      return 1;
-    }
   }
+  if (utilwrite(out_fd, buffer, n_bytes)) {
+    pthread_rwlock_unlock(&lock);
+    return 1;
+  }
+  
   pthread_rwlock_unlock(&lock);
   return 0;
 }

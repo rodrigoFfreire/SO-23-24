@@ -45,7 +45,13 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
     return 1;
   }
 
-  pthread_t *threads = (pthread_t*) malloc(sizeof(pthread_t) * max_threads);
+  pthread_t *threads; 
+  if (NULL == (threads = (pthread_t*) safe_malloc(sizeof(pthread_t) * max_threads))) {
+    ems_terminate(&ems);
+    close(job_fd);
+    close(out_fd);
+    return 1;
+  }
 
   char eof = 0;
   char barrier = 0;
@@ -59,28 +65,24 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
           }
           CommandArgs_t *args_create = (CommandArgs_t*) malloc(sizeof(CommandArgs_t));
           *args_create = (CommandArgs_t){&ems, event_id, 0, num_rows, num_columns, 0, 0, 0};
-          printf("Creating thread %ld\n", used_threads);
           pthread_create(&threads[used_threads], NULL, thread_ems_create, (void*)args_create);
           used_threads++;
 
           break;
 
         case CMD_RESERVE:
-          num_coords = parse_reserve(job_fd, MAX_RESERVATION_SIZE, &event_id, xs, ys);
-
-          if (num_coords == 0) {
+          if (!(num_coords = parse_reserve(job_fd, MAX_RESERVATION_SIZE, &event_id, xs, ys))) {
             fprintf(stderr, "Invalid command. See HELP for usage\n");
             continue;
           }
           CommandArgs_t *args_reserve = (CommandArgs_t*) malloc(sizeof(CommandArgs_t));
           *args_reserve = (CommandArgs_t){&ems, event_id, num_coords, 0, 0, NULL, NULL, 0};
-          
-          args_reserve->xs_cpy = (size_t*) malloc(sizeof(size_t) * num_coords);
-          args_reserve->ys_cpy = (size_t*) malloc(sizeof(size_t) * num_coords);
+
+          args_reserve->xs_cpy = (size_t*) safe_malloc(sizeof(size_t) * num_coords);
+          args_reserve->ys_cpy = (size_t*) safe_malloc(sizeof(size_t) * num_coords);          
           memcpy(args_reserve->xs_cpy, xs, sizeof(size_t) * num_coords);
           memcpy(args_reserve->ys_cpy, ys, sizeof(size_t) * num_coords);
 
-          printf("Creating thread %ld\n", used_threads);
           pthread_create(&threads[used_threads], NULL, thread_ems_reserve, (void*)args_reserve);
           used_threads++;
 
@@ -93,20 +95,19 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
           }
           CommandArgs_t *args_show = (CommandArgs_t*) malloc(sizeof(CommandArgs_t));
           *args_show = (CommandArgs_t){&ems, event_id, 0, 0, 0, 0, 0, out_fd};
-          printf("Creating thread %ld\n", used_threads);
           pthread_create(&threads[used_threads], NULL, thread_ems_show, (void*)args_show);
           used_threads++;
 
           break;
 
-        case CMD_LIST_EVENTS:
+        case CMD_LIST_EVENTS: {
           CommandArgs_t *args_list = (CommandArgs_t*) malloc(sizeof(CommandArgs_t));
           *args_list = (CommandArgs_t){&ems, 0, 0, 0, 0, 0, 0, out_fd};
-          printf("Creating thread %ld\n", used_threads);
           pthread_create(&threads[used_threads], NULL, thread_ems_list_events, (void*)args_list);
           used_threads++;
           
           break;
+        }
 
         case CMD_WAIT:
           if (parse_wait(job_fd, &delay, NULL) == -1) { // thread_id is not implemented
@@ -114,9 +115,10 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
             continue;
           }
 
+          struct timespec delay_ms = delay_to_timespec(delay);
           if (delay > 0) {
             printf("Waiting...\n");
-            ems_wait(delay);
+            nanosleep(&delay_ms, NULL);
           }
 
           break;
@@ -158,6 +160,7 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
     }
     used_threads = 0;
   }
+
   free(threads);
 
   ems_terminate(&ems);

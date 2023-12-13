@@ -13,7 +13,7 @@ typedef struct ThreadManager {
     int job_fd;
     int out_fd;
     unsigned long max_threads;
-    unsigned long thread_id;
+    unsigned long tid;
     unsigned int *thread_delays; 
     char *thread_waits;
     pthread_mutex_t *parseMutex;

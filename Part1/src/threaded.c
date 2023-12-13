@@ -21,7 +21,7 @@ void dispatch_threads(pthread_t *threads, Ems_t *ems, int job_fd, int out_fd,
     th_mgr->thread_id = i;
     th_mgr->thread_waits = thread_waits;
     th_mgr->thread_delays = thread_delays;
-    th_mgr->parseMutex = &parseMutex;
+    th_mgr->parseMutex = parseMutex;
 
     pthread_create(&threads[i], NULL, process_commands, (void*) th_mgr);
   }

@@ -12,7 +12,7 @@ void dispatch_threads(pthread_t *threads, Ems_t *ems, int job_fd, int out_fd,
   unsigned long max_threads, unsigned int *thread_delays, char *thread_waits, 
   pthread_mutex_t *parseMutex)
 {
-  for (int i = 0; i < max_threads; i++) {
+  for (unsigned long i = 0; i < max_threads; i++) {
     ThreadManager_t *th_mgr = (ThreadManager_t*) malloc(sizeof(ThreadManager_t));
     th_mgr->ems = ems;
     th_mgr->job_fd = job_fd;
@@ -26,7 +26,7 @@ void dispatch_threads(pthread_t *threads, Ems_t *ems, int job_fd, int out_fd,
     pthread_create(&threads[i], NULL, process_commands, (void*) th_mgr);
   }
 
-  for (int i = 0; i < max_threads; i++) {
+  for (unsigned long i = 0; i < max_threads; i++) {
     pthread_join(threads[i], NULL); // Change this later for barrier
   }
 }

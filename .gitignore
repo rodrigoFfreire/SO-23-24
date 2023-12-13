@@ -6,6 +6,7 @@
 # Binaries, objects, jobs, tests
 jobs
 results
+*.dSYM
 *.o
 ems
 test

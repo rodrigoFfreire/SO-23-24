@@ -7,24 +7,28 @@
 #include "operations.h"
 #include "constants.h"
 
-typedef struct CommandArgs {
-    struct Ems *ems;
-    unsigned int event_id;
-    size_t num_seats;
-    size_t num_rows;
-    size_t num_cols;
-    size_t *xs_cpy;
-    size_t *ys_cpy;
+
+typedef struct ThreadManager {
+    Ems_t *ems;
+    int job_fd;
     int out_fd;
-} CommandArgs_t;
+    unsigned long max_threads;
+    unsigned long thread_id;
+    unsigned int *thread_delays; 
+    char *thread_waits;
+    pthread_mutex_t *parseMutex;
+    // Add operationMutex;
 
-void *thread_ems_create(void *args);
+} ThreadManager_t;
 
-void *thread_ems_reserve(void *args);
+void dispatch_threads(pthread_t *threads, Ems_t *ems, int job_fd, int out_fd, 
+    unsigned long max_threads, unsigned int *thread_delays, char *thread_waits, 
+    pthread_mutex_t *parseMutex);
 
-void *thread_ems_show(void *args);
+void clean_threads(pthread_t *threads, unsigned int *thread_delays, char *thread_waits,
+  pthread_mutex_t *parseMutex);
 
-void *thread_ems_list_events(void *args);
+void *process_commands(void *args);
 
 
 #endif // EMS_THREADED_H

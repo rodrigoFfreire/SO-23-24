@@ -16,7 +16,7 @@
 #include "utils.h"
 #include "threaded.h"
 
-int process_job(char *job_filepath, char *out_filepath, unsigned int access_delay, unsigned long int max_threads) {
+int process_job(char *job_filepath, char *out_filepath, unsigned int access_delay, unsigned long max_threads) {
   int job_fd = open(job_filepath, O_RDONLY);
   if (job_fd < 0) {
     fprintf(stderr, "Failed to open %s file\n", job_filepath);
@@ -31,11 +31,6 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
     close(out_fd);
     return 1;
   }
-
-  size_t num_rows, num_columns, num_coords;
-  size_t xs[MAX_RESERVATION_SIZE], ys[MAX_RESERVATION_SIZE];
-  unsigned int event_id, delay;
-  unsigned long used_threads = 0;
   
   Ems_t ems = {NULL, 0};
   if (ems_init(&ems, access_delay)) {
@@ -45,123 +40,23 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
     return 1;
   }
 
-  pthread_t *threads; 
-  if (NULL == (threads = (pthread_t*) safe_malloc(sizeof(pthread_t) * max_threads))) {
+  pthread_t *threads = (pthread_t*) malloc(sizeof(pthread_t) * max_threads);
+  if (NULL == threads) {
+    fprintf(stderr, "Failed to allocate memory\n");
     ems_terminate(&ems);
     close(job_fd);
     close(out_fd);
     return 1;
   }
 
-  char eof = 0;
-  char barrier = 0;
-  while (!eof) {
-    while (used_threads < max_threads && !eof) {
-      switch (get_next(job_fd)) {
-        case CMD_CREATE:
-          if (parse_create(job_fd, &event_id, &num_rows, &num_columns) != 0) {
-            fprintf(stderr, "Invalid command. See HELP for usage\n");
-            continue;
-          }
-          CommandArgs_t *args_create = (CommandArgs_t*) malloc(sizeof(CommandArgs_t));
-          *args_create = (CommandArgs_t){&ems, event_id, 0, num_rows, num_columns, 0, 0, 0};
-          pthread_create(&threads[used_threads], NULL, thread_ems_create, (void*)args_create);
-          used_threads++;
+  pthread_mutex_t parseMutex = PTHREAD_MUTEX_INITIALIZER;
+  char *thread_waits = (char*) malloc(sizeof(char) * max_threads);
+  unsigned int *thread_delays = (char*) malloc(sizeof(char) * max_threads);
 
-          break;
+  dispatch_threads(threads, &ems, job_fd, out_fd, max_threads, 
+                   thread_delays, thread_waits, &parseMutex);
 
-        case CMD_RESERVE:
-          if (!(num_coords = parse_reserve(job_fd, MAX_RESERVATION_SIZE, &event_id, xs, ys))) {
-            fprintf(stderr, "Invalid command. See HELP for usage\n");
-            continue;
-          }
-          CommandArgs_t *args_reserve = (CommandArgs_t*) malloc(sizeof(CommandArgs_t));
-          *args_reserve = (CommandArgs_t){&ems, event_id, num_coords, 0, 0, NULL, NULL, 0};
-
-          args_reserve->xs_cpy = (size_t*) safe_malloc(sizeof(size_t) * num_coords);
-          args_reserve->ys_cpy = (size_t*) safe_malloc(sizeof(size_t) * num_coords);          
-          memcpy(args_reserve->xs_cpy, xs, sizeof(size_t) * num_coords);
-          memcpy(args_reserve->ys_cpy, ys, sizeof(size_t) * num_coords);
-
-          pthread_create(&threads[used_threads], NULL, thread_ems_reserve, (void*)args_reserve);
-          used_threads++;
-
-          break;
-
-        case CMD_SHOW:
-          if (parse_show(job_fd, &event_id) != 0) {
-            fprintf(stderr, "Invalid command. See HELP for usage\n");
-            continue;
-          }
-          CommandArgs_t *args_show = (CommandArgs_t*) malloc(sizeof(CommandArgs_t));
-          *args_show = (CommandArgs_t){&ems, event_id, 0, 0, 0, 0, 0, out_fd};
-          pthread_create(&threads[used_threads], NULL, thread_ems_show, (void*)args_show);
-          used_threads++;
-
-          break;
-
-        case CMD_LIST_EVENTS: {
-          CommandArgs_t *args_list = (CommandArgs_t*) malloc(sizeof(CommandArgs_t));
-          *args_list = (CommandArgs_t){&ems, 0, 0, 0, 0, 0, 0, out_fd};
-          pthread_create(&threads[used_threads], NULL, thread_ems_list_events, (void*)args_list);
-          used_threads++;
-          
-          break;
-        }
-
-        case CMD_WAIT:
-          if (parse_wait(job_fd, &delay, NULL) == -1) { // thread_id is not implemented
-            fprintf(stderr, "Invalid command. See HELP for usage\n");
-            continue;
-          }
-
-          struct timespec delay_ms = delay_to_timespec(delay);
-          if (delay > 0) {
-            printf("Waiting...\n");
-            nanosleep(&delay_ms, NULL);
-          }
-
-          break;
-
-        case CMD_INVALID:
-          fprintf(stderr, "Invalid command. See HELP for usage\n");
-          break;
-
-        case CMD_HELP:
-          printf(
-              "Available commands:\n"
-              "  CREATE <event_id> <num_rows> <num_columns>\n"
-              "  RESERVE <event_id> [(<x1>,<y1>) (<x2>,<y2>) ...]\n"
-              "  SHOW <event_id>\n"
-              "  LIST\n"
-              "  WAIT <delay_ms> [thread_id]\n" // thread_id is not implemented
-              "  BARRIER\n"
-              "  HELP\n");
-
-          break;
-
-        case CMD_BARRIER:
-          barrier = 1;
-          break;
-        case CMD_EMPTY:
-          break;
-
-        case EOC:
-          eof = 1;
-          break;
-      }
-      if (barrier) {
-        barrier = 0;
-        break;
-      }
-    }
-    for (unsigned long i = 0; i < max_threads && i < used_threads; i++) {
-      pthread_join(threads[i], NULL);
-    }
-    used_threads = 0;
-  }
-
-  free(threads);
+  clean_threads(threads, thread_delays, thread_waits, &parseMutex);
 
   ems_terminate(&ems);
   
@@ -183,21 +78,21 @@ int main(int argc, char *argv[]) {
 
   char *endptr;
 
-  unsigned long int max_proc = strtoul(argv[2], &endptr, 10);
+  unsigned long max_proc = strtoul(argv[2], &endptr, 10);
   if (*endptr != '\0' || max_proc > (unsigned long )sysconf(_SC_CHILD_MAX)
       || max_proc <= 0) {
     fprintf(stderr, "Invalid max processes or value too large\n");
     return 1;
   }
 
-  unsigned long int max_threads = strtoul(argv[3], &endptr, 10);
+  unsigned long max_threads = strtoul(argv[3], &endptr, 10);
   if (*endptr != '\0' || max_threads <= 0 || max_threads > UINT_MAX) {
     fprintf(stderr, "Invalid max threads or value too large\n");
     return 1;
   }
 
   if (argc > 4) {
-    unsigned long int delay = strtoul(argv[3], &endptr, 10);
+    unsigned long delay = strtoul(argv[3], &endptr, 10);
 
     if (*endptr != '\0' || delay > UINT_MAX) {
       fprintf(stderr, "Invalid delay value or value too large\n");

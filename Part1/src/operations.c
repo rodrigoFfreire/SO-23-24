@@ -269,8 +269,3 @@ int ems_list_events(Ems_t *ems, int out_fd) {
   pthread_rwlock_unlock(&lock);
   return 0;
 }
-
-void ems_wait(unsigned int delay_ms) {
-  struct timespec delay = delay_to_timespec(delay_ms);
-  nanosleep(&delay, NULL);
-}

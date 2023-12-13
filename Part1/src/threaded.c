@@ -34,7 +34,7 @@ void dispatch_threads(pthread_t *threads, Ems_t *ems, int job_fd, int out_fd,
 void clean_threads(pthread_t *threads, unsigned int *thread_delays, char *thread_waits,
   pthread_mutex_t *parseMutex)
 {
-  pthread_mutexattr_destroy(parseMutex);
+  pthread_mutex_destroy(parseMutex);
   free(thread_delays);
   free(thread_waits);
   free(threads);

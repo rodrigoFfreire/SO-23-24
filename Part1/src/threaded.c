@@ -44,27 +44,56 @@ int inject_wait(int wait_option, unsigned int target_tid, unsigned long max_thre
 }
 
 
-void dispatch_threads(pthread_t *threads, Ems_t *ems, int job_fd, int out_fd, 
+int dispatch_threads(pthread_t *threads, Ems_t *ems, int job_fd, int out_fd, 
   unsigned long max_threads, unsigned int *thread_delays, char *thread_waits, 
   pthread_mutex_t *parseMutex)
 {
-  for (unsigned long i = 0; i < max_threads; i++) {
-    ThreadManager_t *th_mgr = (ThreadManager_t*) malloc(sizeof(ThreadManager_t));
-    th_mgr->ems = ems;
-    th_mgr->job_fd = job_fd;
-    th_mgr->out_fd = out_fd;
-    th_mgr->max_threads = max_threads;
-    th_mgr->tid = i;
-    th_mgr->thread_waits = thread_waits;
-    th_mgr->thread_delays = thread_delays;
-    th_mgr->parseMutex = parseMutex;
+  char barrier = 0;
+  char restart = 0;
+  ThreadManager_t *th_mgr = (ThreadManager_t*) malloc(sizeof(ThreadManager_t) * max_threads);
 
-    pthread_create(&threads[i], NULL, process_commands, (void*) th_mgr);
+  for (unsigned long i = 0; i < max_threads; i++) {
+    th_mgr[i].ems = ems;
+    th_mgr[i].job_fd = job_fd;
+    th_mgr[i].out_fd = out_fd;
+    th_mgr[i].max_threads = max_threads;
+    th_mgr[i].tid = i;
+    th_mgr[i].thread_waits = thread_waits;
+    th_mgr[i].thread_delays = thread_delays;
+    th_mgr[i].parseMutex = parseMutex;
+    th_mgr[i].barrier = &barrier;
+
+    if (pthread_create(&threads[i], NULL, process_commands, (void*) &th_mgr[i]) != 0) {
+      fprintf(stderr, "Could not create thread\n");
+      free(th_mgr);
+      return -1;
+    }
   }
 
   for (unsigned long i = 0; i < max_threads; i++) {
-    pthread_join(threads[i], NULL); // Change this later for barrier
+    void *return_value = NULL;
+    if (pthread_join(threads[i], &return_value) != 0) {
+      fprintf(stderr, "Could not join thread\n");
+      free(th_mgr);
+      free(return_value);
+      return -1;
+    }
+
+    if (return_value == NULL)
+      continue;
+    if (*(int*)return_value == THREAD_FOUND_BARRIER)
+      restart = 1;
+
+    free(return_value);
   }
+
+  free(th_mgr);
+
+  if (restart) {
+    fprintf(stderr, "BARRIER Found. Restarting...\n");
+    return 1;
+  }
+  return 0;
 }
 
 
@@ -93,6 +122,15 @@ void *process_commands(void *args) {
   char eof = 0;
   while (!eof) {
     pthread_mutex_lock(th_mgr->parseMutex);
+
+    if (*(th_mgr->barrier)) {   // check if barrrier flag is true
+      pthread_mutex_unlock(th_mgr->parseMutex);
+
+      int *return_status = (int*) malloc(sizeof(int));
+      *return_status = THREAD_ABORT_JOB_PROCESSING;
+
+      pthread_exit((void*) return_status);
+    }
 
     if (th_mgr->thread_waits[tid]) {
       printf("Waiting...\n"); // Remove this later
@@ -192,7 +230,15 @@ void *process_commands(void *args) {
         break;
 
       case CMD_BARRIER:
+        *(th_mgr->barrier) = 1;
+
         pthread_mutex_unlock(th_mgr->parseMutex);
+
+        int *return_status = (int*) malloc(sizeof(int));
+        *return_status = THREAD_FOUND_BARRIER;
+
+        pthread_exit((void*) return_status);
+
         break;
       case CMD_EMPTY:
         pthread_mutex_unlock(th_mgr->parseMutex);
@@ -203,6 +249,6 @@ void *process_commands(void *args) {
         break;
     }
   }
-  free(args);
-  return NULL;
+
+  pthread_exit(NULL);
 }

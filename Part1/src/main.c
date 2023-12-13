@@ -53,8 +53,21 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
   char *thread_waits = (char*) malloc(sizeof(char) * max_threads);
   unsigned int *thread_delays = (unsigned int*) malloc(sizeof(char) * max_threads);
 
-  dispatch_threads(threads, &ems, job_fd, out_fd, max_threads, 
-                   thread_delays, thread_waits, &parseMutex);
+  int job_status = 1;
+  while (job_status == THREAD_FOUND_BARRIER) {
+    memset(thread_waits, 0, max_threads);
+    memset(thread_delays, 0, max_threads);
+
+    job_status = dispatch_threads(threads, &ems, job_fd, out_fd, max_threads, thread_delays, thread_waits, &parseMutex);
+    if (job_status < 0) {
+      fprintf(stderr, "An error has occured processing the job file\n");
+      clean_threads(threads, thread_delays, thread_waits, &parseMutex);
+      ems_terminate(&ems);
+      close(job_fd);
+      close(out_fd);
+      return 1;
+    }
+  }
 
   clean_threads(threads, thread_delays, thread_waits, &parseMutex);
 

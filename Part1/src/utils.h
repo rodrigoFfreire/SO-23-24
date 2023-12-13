@@ -19,11 +19,6 @@ void get_job_paths(char *job_filepath, char *out_filepath, char *dir, char *file
 int utilwrite(int out_fd, const void *buffer, size_t n_bytes);
 
 
-/// Simple abstraction to malloc with error msg
-/// @param size size of memory to allocate
-void *safe_malloc(size_t size);
-
-
 /// Calculates a timespec from a delay in milliseconds.
 /// @param delay_ms Delay in milliseconds.
 /// @return Timespec with the given delay.

@@ -31,15 +31,6 @@ int utilwrite(int out_fd, const void *buffer, size_t n_bytes) {
   return 0;
 }
 
-void *safe_malloc(size_t size) {
-  void *ptr = malloc(size);
-  if (NULL == ptr) {
-    fprintf(stderr, "Could not allocate memory\n");
-    return NULL;
-  }
-  return ptr;
-}
-
 struct timespec delay_to_timespec(unsigned int delay_ms) {
   return (struct timespec){delay_ms / 1000, (delay_ms % 1000) * 1000000};
 }

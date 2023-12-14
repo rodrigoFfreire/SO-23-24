@@ -204,7 +204,7 @@ int ems_show(Ems_t *ems, unsigned int event_id, int out_fd) {
     return 1;
   }
 
-  char buffer[100];
+  char buffer[BUFSIZ];
   size_t n_bytes = 0;
   size_t flushes = 0;
   pthread_rwlock_rdlock(&seat_Lock);
@@ -212,7 +212,7 @@ int ems_show(Ems_t *ems, unsigned int event_id, int out_fd) {
     for (size_t j = 1; j <= event->cols; j++) {
       unsigned int seat = *get_seat_with_delay(ems, event, seat_index(event, i, j));
       
-      ssize_t added_bytes = snprintf(buffer + n_bytes, 100 - n_bytes, "%u", seat);
+      ssize_t added_bytes = snprintf(buffer + n_bytes, BUFSIZ - n_bytes, "%u", seat);
       if (added_bytes < 0) {
         fprintf(stderr, "Encoding error: could not add data to buffer\n");
         pthread_rwlock_unlock(&seat_Lock);
@@ -224,7 +224,7 @@ int ems_show(Ems_t *ems, unsigned int event_id, int out_fd) {
         buffer[n_bytes++] = ' ';
       }
 
-      if (100 - n_bytes <= BUFFER_FLUSH_THOLD) {
+      if (BUFSIZ - n_bytes <= BUFFER_FLUSH_THOLD) {
         if (!flushes) {
           flushes++;
           pthread_mutex_lock(&file_lock);

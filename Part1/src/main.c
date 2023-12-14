@@ -53,7 +53,15 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
   char *thread_waits = (char*) malloc(sizeof(char) * max_threads);
   unsigned int *thread_delays = (unsigned int*) malloc(sizeof(char) * max_threads);
 
-  int job_status = 1;
+  if (thread_waits == NULL || thread_delays == NULL) {
+    fprintf(stderr, "Failed to allocat memory\n");
+    ems_terminate(&ems);
+    close(job_fd);
+    close(out_fd);
+    return 1;
+  }
+
+  int job_status = THREAD_FOUND_BARRIER;
   while (job_status == THREAD_FOUND_BARRIER) {
     memset(thread_waits, 0, max_threads);
     memset(thread_delays, 0, max_threads);

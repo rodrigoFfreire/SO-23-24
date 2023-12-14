@@ -16,7 +16,7 @@ void get_job_paths(char *job_file, char *out_file, char *dir, char *filename) {
   }
 }
 
-int utilwrite(int out_fd, const void *buffer, size_t n_bytes) {
+int safe_write(int out_fd, const void *buffer, size_t n_bytes) {
   ssize_t completed_bytes = 0;
   while (n_bytes > 0) {
     ssize_t wbytes = write(out_fd, buffer + completed_bytes, n_bytes);

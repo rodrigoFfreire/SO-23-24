@@ -16,7 +16,7 @@ void get_job_paths(char *job_filepath, char *out_filepath, char *dir, char *file
 /// @param out_fd Output file descriptor
 /// @param buffer Buffer
 /// @param n_bytes N bytes to write.
-int utilwrite(int out_fd, const void *buffer, size_t n_bytes);
+int safe_write(int out_fd, const void *buffer, size_t n_bytes);
 
 
 /// Calculates a timespec from a delay in milliseconds.

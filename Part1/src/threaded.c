@@ -37,7 +37,7 @@ int inject_wait(int wait_option, unsigned int target_tid, unsigned long max_thre
   else {
     for (unsigned long i = 0; i < max_threads; i++) {
       thread_waits[i] = 1;
-      thread_delays[i] = delay;
+      thread_delays[i] += delay;
     }
   }
   return 0;
@@ -136,6 +136,7 @@ void *process_commands(void *args) {
       printf("Waiting...\n"); // Remove this later
       th_mgr->thread_waits[tid] = 0;
       delay = th_mgr->thread_delays[tid];
+      th_mgr->thread_delays[tid] = 0; // Consume delay
 
       pthread_mutex_unlock(th_mgr->parseMutex);
       thread_wait(delay);

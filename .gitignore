@@ -2,6 +2,7 @@
 *.pdf
 .DS_STORE
 .vscode
+submission
 
 # Binaries, objects, jobs, tests
 jobs

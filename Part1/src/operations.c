@@ -74,7 +74,7 @@ int ems_terminate(Ems_t *ems) {
 }
 
 int ems_create(Ems_t *ems, unsigned int event_id, size_t num_rows, size_t num_cols) {
-  pthread_rwlock_wrlock(&eventList_Lock);
+  pthread_rwlock_rdlock(&eventList_Lock);
   printf("CREATING...\n");
   if (ems->event_list == NULL) {
     pthread_rwlock_unlock(&eventList_Lock);
@@ -90,7 +90,7 @@ int ems_create(Ems_t *ems, unsigned int event_id, size_t num_rows, size_t num_co
     return 1;
   }
   pthread_rwlock_unlock(&event_Lock);
-
+  pthread_rwlock_unlock(&eventList_Lock);
 
   struct Event *event = malloc(sizeof(struct Event));
 
@@ -115,6 +115,7 @@ int ems_create(Ems_t *ems, unsigned int event_id, size_t num_rows, size_t num_co
     event->data[i] = 0;
   }
 
+  pthread_rwlock_wrlock(&eventList_Lock);
   if (append_to_list(ems->event_list, event) != 0) {
     pthread_rwlock_unlock(&eventList_Lock);
     fprintf(stderr, "Error appending event to list\n");

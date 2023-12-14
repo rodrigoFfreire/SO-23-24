@@ -10,8 +10,10 @@
 #include "utils.h"
 #include "operations.h"
 
-pthread_rwlock_t lock = PTHREAD_RWLOCK_INITIALIZER;
 pthread_mutex_t file_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_rwlock_t eventList_Lock = PTHREAD_RWLOCK_INITIALIZER;
+pthread_rwlock_t event_Lock = PTHREAD_RWLOCK_INITIALIZER;
+pthread_rwlock_t seat_Lock = PTHREAD_RWLOCK_INITIALIZER;
 
 
 /// Gets the event with the given ID from the state.
@@ -72,25 +74,28 @@ int ems_terminate(Ems_t *ems) {
 }
 
 int ems_create(Ems_t *ems, unsigned int event_id, size_t num_rows, size_t num_cols) {
-  pthread_rwlock_wrlock(&lock);
+  pthread_rwlock_wrlock(&eventList_Lock);
   printf("CREATING...\n");
   if (ems->event_list == NULL) {
+    pthread_rwlock_unlock(&eventList_Lock);
     fprintf(stderr, "EMS state must be initialized\n");
-    pthread_rwlock_unlock(&lock);
     return 1;
   }
 
+  pthread_rwlock_rdlock(&event_Lock);
   if (get_event_with_delay(ems, event_id) != NULL) {
+    pthread_rwlock_unlock(&eventList_Lock);
+    pthread_rwlock_unlock(&event_Lock);
     fprintf(stderr, "Event already exists\n");
-    pthread_rwlock_unlock(&lock);
     return 1;
   }
+  pthread_rwlock_unlock(&event_Lock);
+
 
   struct Event *event = malloc(sizeof(struct Event));
 
   if (event == NULL) {
     fprintf(stderr, "Error allocating memory for event\n");
-
     return 1;
   }
 
@@ -111,36 +116,42 @@ int ems_create(Ems_t *ems, unsigned int event_id, size_t num_rows, size_t num_co
   }
 
   if (append_to_list(ems->event_list, event) != 0) {
+    pthread_rwlock_unlock(&eventList_Lock);
     fprintf(stderr, "Error appending event to list\n");
     free(event->data);
     free(event);
-    pthread_rwlock_unlock(&lock);
     return 1;
   }
-  pthread_rwlock_unlock(&lock);
+  pthread_rwlock_unlock(&eventList_Lock);
+  
   return 0;
 }
 
 int ems_reserve(Ems_t *ems, unsigned int event_id, size_t num_seats, size_t *xs, size_t *ys) {
-  pthread_rwlock_wrlock(&lock);
+  pthread_rwlock_rdlock(&eventList_Lock);
   printf("RESERVING...\n");
   if (ems->event_list == NULL) {
+    pthread_rwlock_unlock(&eventList_Lock);
     fprintf(stderr, "EMS state must be initialized\n");
-    pthread_rwlock_unlock(&lock);
     return 1;
   }
 
+  pthread_rwlock_rdlock(&event_Lock);
   struct Event *event = get_event_with_delay(ems, event_id);
+  pthread_rwlock_unlock(&event_Lock);
+  pthread_rwlock_unlock(&eventList_Lock);
 
   if (event == NULL) {
     fprintf(stderr, "Event not found\n");
-    pthread_rwlock_unlock(&lock);
     return 1;
   }
 
+  pthread_rwlock_wrlock(&event_Lock);
   unsigned int reservation_id = ++event->reservations;
+  pthread_rwlock_unlock(&event_Lock);
 
   size_t i = 0;
+  pthread_rwlock_wrlock(&seat_Lock);
   for (; i < num_seats; i++) {
     size_t row = xs[i];
     size_t col = ys[i];
@@ -149,8 +160,8 @@ int ems_reserve(Ems_t *ems, unsigned int event_id, size_t num_seats, size_t *xs,
       fprintf(stderr, "Invalid seat\n");
       break;
     }
-
-    if (*get_seat_with_delay(ems, event, seat_index(event, row, col)) != 0) {
+    unsigned int seat = *get_seat_with_delay(ems, event, seat_index(event, row, col));
+    if (seat != 0) {
       fprintf(stderr, "Seat already reserved\n");
       break;
     }
@@ -160,44 +171,51 @@ int ems_reserve(Ems_t *ems, unsigned int event_id, size_t num_seats, size_t *xs,
 
   // If the reservation was not successful, free the seats that were reserved.
   if (i < num_seats) {
+    pthread_rwlock_wrlock(&event_Lock);
     event->reservations--;
+    pthread_rwlock_unlock(&event_Lock);
     for (size_t j = 0; j < i; j++) {
       *get_seat_with_delay(ems, event, seat_index(event, xs[j], ys[j])) = 0;
     }
-    pthread_rwlock_unlock(&lock);
+    pthread_rwlock_unlock(&seat_Lock);
     return 1;
   }
-  pthread_rwlock_unlock(&lock);
+  pthread_rwlock_unlock(&seat_Lock);
+
   return 0;
 }
 
 int ems_show(Ems_t *ems, unsigned int event_id, int out_fd) {
-  pthread_rwlock_rdlock(&lock);
+  pthread_rwlock_rdlock(&eventList_Lock);
   printf("SHOWING...\n");
   if (ems->event_list == NULL) {
+    pthread_rwlock_unlock(&eventList_Lock);
     fprintf(stderr, "EMS state must be initialized\n");
-    pthread_rwlock_unlock(&lock);
     return 1;
   }
 
+  pthread_rwlock_rdlock(&event_Lock);
   struct Event *event = get_event_with_delay(ems, event_id);
+  pthread_rwlock_unlock(&event_Lock);
+  pthread_rwlock_unlock(&eventList_Lock);
 
   if (event == NULL) {
     fprintf(stderr, "Event not found\n");
-    pthread_rwlock_unlock(&lock);
     return 1;
   }
 
-  char buffer[BUFSIZ];
+  char buffer[100];
   size_t n_bytes = 0;
+  size_t flushes = 0;
+  pthread_rwlock_rdlock(&seat_Lock);
   for (size_t i = 1; i <= event->rows; i++) {
     for (size_t j = 1; j <= event->cols; j++) {
-      unsigned int *seat = get_seat_with_delay(ems, event, seat_index(event, i, j));
-      ssize_t added_bytes = snprintf(buffer + n_bytes, BUFSIZ - n_bytes, "%u", *seat);
-
+      unsigned int seat = *get_seat_with_delay(ems, event, seat_index(event, i, j));
+      
+      ssize_t added_bytes = snprintf(buffer + n_bytes, 100 - n_bytes, "%u", seat);
       if (added_bytes < 0) {
         fprintf(stderr, "Encoding error: could not add data to buffer\n");
-        pthread_rwlock_unlock(&lock);
+        pthread_rwlock_unlock(&seat_Lock);
         return 1;
       }
 
@@ -206,9 +224,14 @@ int ems_show(Ems_t *ems, unsigned int event_id, int out_fd) {
         buffer[n_bytes++] = ' ';
       }
 
-      if (BUFSIZ - n_bytes <= BUFFER_FLUSH_THOLD) {
-        if (utilwrite(out_fd, buffer, n_bytes)) {
-          pthread_rwlock_unlock(&lock);
+      if (100 - n_bytes <= BUFFER_FLUSH_THOLD) {
+        if (!flushes) {
+          flushes++;
+          pthread_mutex_lock(&file_lock);
+        }
+        if (safe_write(out_fd, buffer, n_bytes)) {
+          pthread_mutex_unlock(&file_lock);
+          pthread_rwlock_unlock(&seat_Lock);
           return 1;
         }
         n_bytes = 0;
@@ -216,26 +239,31 @@ int ems_show(Ems_t *ems, unsigned int event_id, int out_fd) {
     }
     buffer[n_bytes++] = '\n';
   }
+  pthread_rwlock_unlock(&seat_Lock);
 
-  if (utilwrite(out_fd, buffer, n_bytes)) {
-    pthread_rwlock_unlock(&lock);
+  if (!flushes)
+    pthread_mutex_lock(&file_lock);
+
+  if (safe_write(out_fd, buffer, n_bytes)) {
+    pthread_mutex_unlock(&file_lock);
     return 1;
   }
-  pthread_rwlock_unlock(&lock);
+  pthread_mutex_unlock(&file_lock);
   return 0;
 }
 
 int ems_list_events(Ems_t *ems, int out_fd) {
-  pthread_rwlock_rdlock(&lock);
+  pthread_rwlock_rdlock(&eventList_Lock);
   printf("LISTING...\n");
   if (ems->event_list == NULL) {
+    pthread_rwlock_unlock(&eventList_Lock);
     fprintf(stderr, "EMS state must be initialized\n");
-    pthread_rwlock_unlock(&lock);
     return 1;
   }
 
   char buffer[BUFSIZ];
   size_t n_bytes = 0;
+  size_t flushes = 0;
   if (ems->event_list->head == NULL) {
     strcpy(buffer, "No events\n");
     n_bytes = strlen("No events\n");
@@ -246,14 +274,19 @@ int ems_list_events(Ems_t *ems, int out_fd) {
       ssize_t added_bytes = snprintf(buffer + n_bytes, BUFSIZ - n_bytes, "Event: %u\n", (current->event)->id);
       if (added_bytes < 0) {
         fprintf(stderr, "Encoding error: could not add data to buffer\n");
-        pthread_rwlock_unlock(&lock);
+        pthread_rwlock_unlock(&eventList_Lock);
         return 1;
       }
       n_bytes += (size_t) added_bytes;
 
       if (BUFSIZ - n_bytes <= BUFFER_FLUSH_THOLD) {
-        if (utilwrite(out_fd, buffer, n_bytes)) {
-          pthread_rwlock_unlock(&lock);
+        if (!flushes) {
+          flushes++;
+          pthread_mutex_lock(&file_lock);
+        }
+        if (safe_write(out_fd, buffer, n_bytes)) {
+          pthread_rwlock_unlock(&eventList_Lock);
+          pthread_mutex_unlock(&file_lock);
           return 1;
         }
         n_bytes = 0;
@@ -261,11 +294,16 @@ int ems_list_events(Ems_t *ems, int out_fd) {
       current = current->next;
     }
   }
-  if (utilwrite(out_fd, buffer, n_bytes)) {
-    pthread_rwlock_unlock(&lock);
+  if (!flushes)
+    pthread_mutex_lock(&file_lock);
+
+  if (safe_write(out_fd, buffer, n_bytes)) {
+    pthread_rwlock_unlock(&eventList_Lock);
+    pthread_mutex_unlock(&file_lock);
     return 1;
   }
-  
-  pthread_rwlock_unlock(&lock);
+  pthread_mutex_unlock(&file_lock);
+  pthread_rwlock_unlock(&eventList_Lock);
+
   return 0;
 }

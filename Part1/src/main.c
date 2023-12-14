@@ -51,7 +51,7 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
 
   pthread_mutex_t parseMutex = PTHREAD_MUTEX_INITIALIZER;
   char *thread_waits = (char*) malloc(sizeof(char) * max_threads);
-  unsigned int *thread_delays = (unsigned int*) malloc(sizeof(char) * max_threads);
+  unsigned int *thread_delays = (unsigned int*) malloc(sizeof(int) * max_threads);
 
   if (thread_waits == NULL || thread_delays == NULL) {
     fprintf(stderr, "Failed to allocat memory\n");

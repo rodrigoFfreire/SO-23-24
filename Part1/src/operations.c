@@ -10,11 +10,11 @@
 #include "utils.h"
 #include "operations.h"
 
-pthread_mutex_t file_lock = PTHREAD_MUTEX_INITIALIZER;
+
+pthread_mutex_t file_Lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_rwlock_t eventList_Lock = PTHREAD_RWLOCK_INITIALIZER;
 pthread_rwlock_t event_Lock = PTHREAD_RWLOCK_INITIALIZER;
 pthread_rwlock_t seat_Lock = PTHREAD_RWLOCK_INITIALIZER;
-
 
 /// Gets the event with the given ID from the state.
 /// @note Will wait to simulate a real system accessing a costly memory
@@ -54,7 +54,7 @@ size_t seat_index(struct Event *event, size_t row, size_t col) {
 int ems_init(Ems_t *ems, unsigned int delay_ms) {
   if (ems->event_list != NULL) {
     fprintf(stderr, "EMS state has already been initialized\n");
-    return 1;
+    return EXIT_FAILURE;
   }
 
   ems->event_list = create_list();
@@ -64,13 +64,18 @@ int ems_init(Ems_t *ems, unsigned int delay_ms) {
 }
 
 int ems_terminate(Ems_t *ems) {
+  pthread_mutex_destroy(&file_Lock);
+  pthread_rwlock_destroy(&eventList_Lock);
+  pthread_rwlock_destroy(&event_Lock);
+  pthread_rwlock_destroy(&seat_Lock);
+
   if (ems->event_list == NULL) {
     fprintf(stderr, "EMS state must be initialized\n");
-    return 1;
+    return EXIT_FAILURE;
   }
 
   free_list(ems->event_list);
-  return 0;
+  return EXIT_SUCCESS;
 }
 
 int ems_create(Ems_t *ems, unsigned int event_id, size_t num_rows, size_t num_cols) {
@@ -79,7 +84,7 @@ int ems_create(Ems_t *ems, unsigned int event_id, size_t num_rows, size_t num_co
   if (ems->event_list == NULL) {
     pthread_rwlock_unlock(&eventList_Lock);
     fprintf(stderr, "EMS state must be initialized\n");
-    return 1;
+    return EXIT_FAILURE;
   }
 
   pthread_rwlock_rdlock(&event_Lock);
@@ -87,7 +92,7 @@ int ems_create(Ems_t *ems, unsigned int event_id, size_t num_rows, size_t num_co
     pthread_rwlock_unlock(&eventList_Lock);
     pthread_rwlock_unlock(&event_Lock);
     fprintf(stderr, "Event already exists\n");
-    return 1;
+    return EXIT_FAILURE;
   }
   pthread_rwlock_unlock(&event_Lock);
   pthread_rwlock_unlock(&eventList_Lock);
@@ -96,7 +101,7 @@ int ems_create(Ems_t *ems, unsigned int event_id, size_t num_rows, size_t num_co
 
   if (event == NULL) {
     fprintf(stderr, "Error allocating memory for event\n");
-    return 1;
+    return EXIT_FAILURE;
   }
 
   event->id = event_id;
@@ -108,7 +113,7 @@ int ems_create(Ems_t *ems, unsigned int event_id, size_t num_rows, size_t num_co
   if (event->data == NULL) {
     fprintf(stderr, "Error allocating memory for event data\n");
     free(event);
-    return 1;
+    return EXIT_FAILURE;
   }
 
   for (size_t i = 0; i < num_rows * num_cols; i++) {
@@ -121,11 +126,11 @@ int ems_create(Ems_t *ems, unsigned int event_id, size_t num_rows, size_t num_co
     fprintf(stderr, "Error appending event to list\n");
     free(event->data);
     free(event);
-    return 1;
+    return EXIT_FAILURE;
   }
   pthread_rwlock_unlock(&eventList_Lock);
   
-  return 0;
+  return EXIT_SUCCESS;
 }
 
 int ems_reserve(Ems_t *ems, unsigned int event_id, size_t num_seats, size_t *xs, size_t *ys) {
@@ -134,7 +139,7 @@ int ems_reserve(Ems_t *ems, unsigned int event_id, size_t num_seats, size_t *xs,
   if (ems->event_list == NULL) {
     pthread_rwlock_unlock(&eventList_Lock);
     fprintf(stderr, "EMS state must be initialized\n");
-    return 1;
+    return EXIT_FAILURE;
   }
 
   pthread_rwlock_rdlock(&event_Lock);
@@ -144,7 +149,7 @@ int ems_reserve(Ems_t *ems, unsigned int event_id, size_t num_seats, size_t *xs,
 
   if (event == NULL) {
     fprintf(stderr, "Event not found\n");
-    return 1;
+    return EXIT_FAILURE;
   }
 
   pthread_rwlock_wrlock(&event_Lock);
@@ -179,11 +184,11 @@ int ems_reserve(Ems_t *ems, unsigned int event_id, size_t num_seats, size_t *xs,
       *get_seat_with_delay(ems, event, seat_index(event, xs[j], ys[j])) = 0;
     }
     pthread_rwlock_unlock(&seat_Lock);
-    return 1;
+    return EXIT_FAILURE;
   }
   pthread_rwlock_unlock(&seat_Lock);
 
-  return 0;
+  return EXIT_SUCCESS;
 }
 
 int ems_show(Ems_t *ems, unsigned int event_id, int out_fd) {
@@ -192,7 +197,7 @@ int ems_show(Ems_t *ems, unsigned int event_id, int out_fd) {
   if (ems->event_list == NULL) {
     pthread_rwlock_unlock(&eventList_Lock);
     fprintf(stderr, "EMS state must be initialized\n");
-    return 1;
+    return EXIT_FAILURE;
   }
 
   pthread_rwlock_rdlock(&event_Lock);
@@ -202,7 +207,7 @@ int ems_show(Ems_t *ems, unsigned int event_id, int out_fd) {
 
   if (event == NULL) {
     fprintf(stderr, "Event not found\n");
-    return 1;
+    return EXIT_FAILURE;
   }
 
   char buffer[BUFSIZ];
@@ -217,7 +222,7 @@ int ems_show(Ems_t *ems, unsigned int event_id, int out_fd) {
       if (added_bytes < 0) {
         fprintf(stderr, "Encoding error: could not add data to buffer\n");
         pthread_rwlock_unlock(&seat_Lock);
-        return 1;
+        return EXIT_FAILURE;
       }
 
       n_bytes += (size_t) added_bytes;
@@ -228,12 +233,12 @@ int ems_show(Ems_t *ems, unsigned int event_id, int out_fd) {
       if (BUFSIZ - n_bytes <= BUFFER_FLUSH_THOLD) {
         if (!flushes) {
           flushes++;
-          pthread_mutex_lock(&file_lock);
+          pthread_mutex_lock(&file_Lock);
         }
         if (safe_write(out_fd, buffer, n_bytes)) {
-          pthread_mutex_unlock(&file_lock);
+          pthread_mutex_unlock(&file_Lock);
           pthread_rwlock_unlock(&seat_Lock);
-          return 1;
+          return EXIT_FAILURE;
         }
         n_bytes = 0;
       }
@@ -243,14 +248,14 @@ int ems_show(Ems_t *ems, unsigned int event_id, int out_fd) {
   pthread_rwlock_unlock(&seat_Lock);
 
   if (!flushes)
-    pthread_mutex_lock(&file_lock);
+    pthread_mutex_lock(&file_Lock);
 
   if (safe_write(out_fd, buffer, n_bytes)) {
-    pthread_mutex_unlock(&file_lock);
-    return 1;
+    pthread_mutex_unlock(&file_Lock);
+    return EXIT_FAILURE;
   }
-  pthread_mutex_unlock(&file_lock);
-  return 0;
+  pthread_mutex_unlock(&file_Lock);
+  return EXIT_SUCCESS;
 }
 
 int ems_list_events(Ems_t *ems, int out_fd) {
@@ -259,7 +264,7 @@ int ems_list_events(Ems_t *ems, int out_fd) {
   if (ems->event_list == NULL) {
     pthread_rwlock_unlock(&eventList_Lock);
     fprintf(stderr, "EMS state must be initialized\n");
-    return 1;
+    return EXIT_FAILURE;
   }
 
   char buffer[BUFSIZ];
@@ -276,19 +281,19 @@ int ems_list_events(Ems_t *ems, int out_fd) {
       if (added_bytes < 0) {
         fprintf(stderr, "Encoding error: could not add data to buffer\n");
         pthread_rwlock_unlock(&eventList_Lock);
-        return 1;
+        return EXIT_FAILURE;
       }
       n_bytes += (size_t) added_bytes;
 
       if (BUFSIZ - n_bytes <= BUFFER_FLUSH_THOLD) {
         if (!flushes) {
           flushes++;
-          pthread_mutex_lock(&file_lock);
+          pthread_mutex_lock(&file_Lock);
         }
         if (safe_write(out_fd, buffer, n_bytes)) {
           pthread_rwlock_unlock(&eventList_Lock);
-          pthread_mutex_unlock(&file_lock);
-          return 1;
+          pthread_mutex_unlock(&file_Lock);
+          return EXIT_FAILURE;
         }
         n_bytes = 0;
       }
@@ -296,15 +301,15 @@ int ems_list_events(Ems_t *ems, int out_fd) {
     }
   }
   if (!flushes)
-    pthread_mutex_lock(&file_lock);
+    pthread_mutex_lock(&file_Lock);
 
   if (safe_write(out_fd, buffer, n_bytes)) {
     pthread_rwlock_unlock(&eventList_Lock);
-    pthread_mutex_unlock(&file_lock);
-    return 1;
+    pthread_mutex_unlock(&file_Lock);
+    return EXIT_FAILURE;
   }
-  pthread_mutex_unlock(&file_lock);
+  pthread_mutex_unlock(&file_Lock);
   pthread_rwlock_unlock(&eventList_Lock);
 
-  return 0;
+  return EXIT_SUCCESS;
 }

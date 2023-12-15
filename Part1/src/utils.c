@@ -28,7 +28,7 @@ int safe_write(int out_fd, const void *buffer, size_t n_bytes) {
     n_bytes -= (size_t) wbytes;
     completed_bytes += wbytes;
   }
-  return 0;
+  return EXIT_SUCCESS;
 }
 
 struct timespec delay_to_timespec(unsigned int delay_ms) {

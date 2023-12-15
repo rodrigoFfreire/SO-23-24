@@ -21,7 +21,7 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
   if (job_fd < 0) {
     fprintf(stderr, "Failed to open %s file\n", job_filepath);
     close(job_fd);
-    return 1;
+    return EXIT_FAILURE;
   }
 
   int out_fd = open(out_filepath, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
@@ -29,7 +29,7 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
     fprintf(stderr, "Failed to open %s file\n", out_filepath);
     close(job_fd);
     close(out_fd);
-    return 1;
+    return EXIT_FAILURE;
   }
   
   Ems_t ems = {NULL, 0};
@@ -37,7 +37,7 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
     fprintf(stderr, "Failed to initialize EMS\n");
     close(job_fd);
     close(out_fd);
-    return 1;
+    return EXIT_FAILURE;
   }
 
   pthread_t *threads = (pthread_t*) malloc(sizeof(pthread_t) * max_threads);
@@ -46,10 +46,9 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
     ems_terminate(&ems);
     close(job_fd);
     close(out_fd);
-    return 1;
+    return EXIT_FAILURE;
   }
 
-  pthread_mutex_t parseMutex = PTHREAD_MUTEX_INITIALIZER;
   char *thread_waits = (char*) malloc(sizeof(char) * max_threads);
   unsigned int *thread_delays = (unsigned int*) malloc(sizeof(int) * max_threads);
 
@@ -58,7 +57,7 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
     ems_terminate(&ems);
     close(job_fd);
     close(out_fd);
-    return 1;
+    return EXIT_FAILURE;
   }
 
   int job_status = THREAD_FOUND_BARRIER;
@@ -66,25 +65,27 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
     memset(thread_waits, 0, max_threads);
     memset(thread_delays, 0, max_threads);
 
-    job_status = dispatch_threads(threads, &ems, job_fd, out_fd, max_threads, thread_delays, thread_waits, &parseMutex);
+    job_status = dispatch_threads(threads, &ems, job_fd, out_fd, max_threads, thread_delays, thread_waits);
     if (job_status < 0) {
       fprintf(stderr, "An error has occured processing the job file\n");
-      clean_threads(threads, thread_delays, thread_waits, &parseMutex);
+      clean_threads(threads, thread_delays, thread_waits);
       ems_terminate(&ems);
       close(job_fd);
       close(out_fd);
-      return 1;
+      return EXIT_FAILURE;
     }
   }
 
-  clean_threads(threads, thread_delays, thread_waits, &parseMutex);
+  free(thread_delays);
+  free(thread_waits);
+  free(threads);
 
   ems_terminate(&ems);
   
   close(job_fd);
   close(out_fd);
 
-  return 0;
+  return EXIT_SUCCESS;
 }
 
 
@@ -94,7 +95,7 @@ int main(int argc, char *argv[]) {
 
   if (argc < 4) {
     fprintf(stderr, "Not enough arguments were provided\n");
-    return 1;
+    return EXIT_FAILURE;
   }
 
   char *endptr;
@@ -103,13 +104,13 @@ int main(int argc, char *argv[]) {
   if (*endptr != '\0' || max_proc > (unsigned long )sysconf(_SC_CHILD_MAX)
       || max_proc <= 0) {
     fprintf(stderr, "Invalid max processes or value too large\n");
-    return 1;
+    return EXIT_FAILURE;
   }
 
   unsigned long max_threads = strtoul(argv[3], &endptr, 10);
   if (*endptr != '\0' || max_threads <= 0 || max_threads > UINT_MAX) {
     fprintf(stderr, "Invalid max threads or value too large\n");
-    return 1;
+    return EXIT_FAILURE;
   }
 
   if (argc > 4) {
@@ -117,7 +118,7 @@ int main(int argc, char *argv[]) {
 
     if (*endptr != '\0' || delay > UINT_MAX) {
       fprintf(stderr, "Invalid delay value or value too large\n");
-      return 1;
+      return EXIT_FAILURE;
     }
 
     state_access_delay_ms = (unsigned int)delay;
@@ -126,7 +127,7 @@ int main(int argc, char *argv[]) {
   DIR *dir = opendir(argv[1]);
   if (NULL == dir) {
     fprintf(stderr, "Failed to open jobs directory\n");
-    return 1;
+    return EXIT_FAILURE;
   }
 
   char job_dir[256];
@@ -178,5 +179,5 @@ int main(int argc, char *argv[]) {
     printf("Job with PID=%d terminated with exit status %d\n", pid_child, WEXITSTATUS(status));
   }
 
-  return 0;
+  return EXIT_SUCCESS;
 }

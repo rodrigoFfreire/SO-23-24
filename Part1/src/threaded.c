@@ -8,6 +8,8 @@
 #include "utils.h"
 #include "time.h"
 
+pthread_mutex_t parseMutex = PTHREAD_MUTEX_INITIALIZER;
+
 /// The current thread executing this will wait for `delay_ms`
 /// @param delay_ms The amount to wait in milliseconds
 void thread_wait(unsigned int delay_ms) {
@@ -45,12 +47,15 @@ int inject_wait(int wait_option, unsigned int target_tid, unsigned long max_thre
 
 
 int dispatch_threads(pthread_t *threads, Ems_t *ems, int job_fd, int out_fd, 
-  unsigned long max_threads, unsigned int *thread_delays, char *thread_waits, 
-  pthread_mutex_t *parseMutex)
+  unsigned long max_threads, unsigned int *thread_delays, char *thread_waits)
 {
   char barrier = 0;
-  char restart = 0;
   ThreadManager_t *th_mgr = (ThreadManager_t*) malloc(sizeof(ThreadManager_t) * max_threads);
+  if (th_mgr == NULL) {
+    fprintf(stderr, "Could not allocate memory\n");
+    pthread_mutex_destroy(&parseMutex);
+    return THREAD_ERROR;
+  }
 
   for (unsigned long i = 0; i < max_threads; i++) {
     th_mgr[i].ems = ems;
@@ -60,13 +65,13 @@ int dispatch_threads(pthread_t *threads, Ems_t *ems, int job_fd, int out_fd,
     th_mgr[i].tid = i;
     th_mgr[i].thread_waits = thread_waits;
     th_mgr[i].thread_delays = thread_delays;
-    th_mgr[i].parseMutex = parseMutex;
     th_mgr[i].barrier = &barrier;
 
     if (pthread_create(&threads[i], NULL, process_commands, (void*) &th_mgr[i]) != 0) {
       fprintf(stderr, "Could not create thread\n");
       free(th_mgr);
-      return -1;
+      pthread_mutex_destroy(&parseMutex);
+      return THREAD_ERROR;
     }
   }
 
@@ -76,34 +81,28 @@ int dispatch_threads(pthread_t *threads, Ems_t *ems, int job_fd, int out_fd,
       fprintf(stderr, "Could not join thread\n");
       free(th_mgr);
       free(return_value);
-      return -1;
+      pthread_mutex_destroy(&parseMutex);
+      return THREAD_ERROR;
     }
 
-    if (return_value == NULL)
-      continue;
-    if (*(int*)return_value == THREAD_FOUND_BARRIER)
-      restart = 1;
+    if (return_value == NULL) {
+      fprintf(stderr, "Thread could not process file\n");
+      free(th_mgr);
+      free(return_value);
+      pthread_mutex_destroy(&parseMutex);
+      return THREAD_ERROR;
+    }
 
     free(return_value);
   }
-
   free(th_mgr);
+  pthread_mutex_destroy(&parseMutex);
 
-  if (restart) {
+  if (barrier) {
     fprintf(stderr, "BARRIER Found. Restarting...\n");
-    return 1;
+    return THREAD_FOUND_BARRIER;
   }
-  return 0;
-}
-
-
-void clean_threads(pthread_t *threads, unsigned int *thread_delays, char *thread_waits,
-  pthread_mutex_t *parseMutex)
-{
-  pthread_mutex_destroy(parseMutex);
-  free(thread_delays);
-  free(thread_waits);
-  free(threads);
+  return THREAD_SUCCESS;
 }
 
 
@@ -119,40 +118,44 @@ void *process_commands(void *args) {
   size_t xs[MAX_RESERVATION_SIZE], ys[MAX_RESERVATION_SIZE];
   unsigned int event_id, delay, target_tid;
 
+  int *return_value = (int*) malloc(sizeof(int));
+  if (return_value == NULL) {
+    fprintf(stderr, "Could not allocate memory\n");
+    pthread_exit(NULL);
+  }
+
   char eof = 0;
   while (!eof) {
-    pthread_mutex_lock(th_mgr->parseMutex);
+    pthread_mutex_lock(&parseMutex);
 
     if (*(th_mgr->barrier)) {   // check if barrrier flag is true
-      pthread_mutex_unlock(th_mgr->parseMutex);
+      pthread_mutex_unlock(&parseMutex);
 
-      int *return_status = (int*) malloc(sizeof(int));
-      *return_status = THREAD_ABORT_JOB_PROCESSING;
-
-      pthread_exit((void*) return_status);
+      *return_value = THREAD_FOUND_BARRIER;
+      pthread_exit((void*) return_value);
     }
 
     if (th_mgr->thread_waits[tid]) {
       printf("Waiting...\n"); // Remove this later
       th_mgr->thread_waits[tid] = 0;
       delay = th_mgr->thread_delays[tid];
-      th_mgr->thread_delays[tid] = 0; // Consume delay
+      th_mgr->thread_delays[tid] = 0;  // Consume delay
 
-      pthread_mutex_unlock(th_mgr->parseMutex);
+      pthread_mutex_unlock(&parseMutex);
       thread_wait(delay);
     } else {
-      pthread_mutex_unlock(th_mgr->parseMutex);
+      pthread_mutex_unlock(&parseMutex);
     }
 
-    pthread_mutex_lock(th_mgr->parseMutex);
+    pthread_mutex_lock(&parseMutex);
     switch (get_next(job_fd)) {
       case CMD_CREATE:
         if (parse_create(job_fd, &event_id, &num_rows, &num_columns) != 0) {
-          pthread_mutex_unlock(th_mgr->parseMutex);
+          pthread_mutex_unlock(&parseMutex);
           fprintf(stderr, "Invalid command. See HELP for usage\n");
           continue;
         }
-        pthread_mutex_unlock(th_mgr->parseMutex);
+        pthread_mutex_unlock(&parseMutex);
 
         if (ems_create(ems, event_id, num_rows, num_columns))
           fprintf(stderr, "Failed to create event\n");
@@ -161,11 +164,11 @@ void *process_commands(void *args) {
 
       case CMD_RESERVE:
         if ((num_coords = parse_reserve(job_fd, MAX_RESERVATION_SIZE, &event_id, xs, ys)) == 0) {
-          pthread_mutex_unlock(th_mgr->parseMutex);
+          pthread_mutex_unlock(&parseMutex);
           fprintf(stderr, "Invalid command. See HELP for usage\n");
           continue;
         }
-        pthread_mutex_unlock(th_mgr->parseMutex);
+        pthread_mutex_unlock(&parseMutex);
 
         if (ems_reserve(ems, event_id, num_coords, xs, ys))
           fprintf(stderr, "Failed to reserve seats\n");
@@ -174,11 +177,11 @@ void *process_commands(void *args) {
 
       case CMD_SHOW:
         if (parse_show(job_fd, &event_id) != 0) {
-          pthread_mutex_unlock(th_mgr->parseMutex);
+          pthread_mutex_unlock(&parseMutex);
           fprintf(stderr, "Invalid command. See HELP for usage\n");
           continue;
         }
-        pthread_mutex_unlock(th_mgr->parseMutex);
+        pthread_mutex_unlock(&parseMutex);
 
         if (ems_show(ems, event_id, out_fd))
           fprintf(stderr, "Failed to show event\n");
@@ -186,7 +189,7 @@ void *process_commands(void *args) {
         break;
 
       case CMD_LIST_EVENTS:
-        pthread_mutex_unlock(th_mgr->parseMutex);
+        pthread_mutex_unlock(&parseMutex);
 
         if (ems_list_events(ems, out_fd)) {
           fprintf(stderr, "Failed to list events\n");
@@ -197,7 +200,7 @@ void *process_commands(void *args) {
       case CMD_WAIT:
         int wait_option = parse_wait(job_fd, &delay, &target_tid);
         if (wait_option == -1 || delay == 0) {
-          pthread_mutex_unlock(th_mgr->parseMutex);
+          pthread_mutex_unlock(&parseMutex);
           fprintf(stderr, "Invalid command. See HELP for usage\n");
           continue;
         }
@@ -207,17 +210,17 @@ void *process_commands(void *args) {
         {
           fprintf(stderr, "Invalid thread id\n");
         }
-        pthread_mutex_unlock(th_mgr->parseMutex);
+        pthread_mutex_unlock(&parseMutex);
 
         break;
 
       case CMD_INVALID:
-        pthread_mutex_unlock(th_mgr->parseMutex);
+        pthread_mutex_unlock(&parseMutex);
         fprintf(stderr, "Invalid command. See HELP for usage\n");
         break;
 
       case CMD_HELP:
-        pthread_mutex_unlock(th_mgr->parseMutex);
+        pthread_mutex_unlock(&parseMutex);
         printf(
             "Available commands:\n"
             "  CREATE <event_id> <num_rows> <num_columns>\n"
@@ -233,23 +236,24 @@ void *process_commands(void *args) {
       case CMD_BARRIER:
         *(th_mgr->barrier) = 1;
 
-        pthread_mutex_unlock(th_mgr->parseMutex);
+        pthread_mutex_unlock(&parseMutex);
 
-        int *return_status = (int*) malloc(sizeof(int));
-        *return_status = THREAD_FOUND_BARRIER;
-
-        pthread_exit((void*) return_status);
+        *return_value = THREAD_FOUND_BARRIER;
+        pthread_exit((void*) return_value);
 
         break;
       case CMD_EMPTY:
-        pthread_mutex_unlock(th_mgr->parseMutex);
+        pthread_mutex_unlock(&parseMutex);
+
         break;
       case EOC:
-        pthread_mutex_unlock(th_mgr->parseMutex);
+        pthread_mutex_unlock(&parseMutex);
         eof = 1;
+
         break;
     }
   }
 
-  pthread_exit(NULL);
+  *return_value = THREAD_SUCCESS;
+  pthread_exit((void*) return_value);
 }

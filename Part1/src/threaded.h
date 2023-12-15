@@ -7,6 +7,9 @@
 #include "operations.h"
 #include "constants.h"
 
+#define THREAD_ERROR -1
+#define THREAD_SUCCESS 0
+#define THREAD_FOUND_BARRIER 1
 
 typedef struct ThreadManager {
     Ems_t *ems;
@@ -17,9 +20,6 @@ typedef struct ThreadManager {
     unsigned int *thread_delays; 
     char *thread_waits;
     char *barrier;
-    pthread_mutex_t *parseMutex;
-    // Add operationMutex;
-
 } ThreadManager_t;
 
 
@@ -31,14 +31,9 @@ typedef struct ThreadManager {
 /// @param max_threads The maximum amount of threads allowed to be ran concurrently
 /// @param thread_delays Array of delays for each thread when WAITS are injected
 /// @param thread_waits Array that contains the WAIT flag for each thread
-/// @param parseMutex Parsing Lock
 /// @return `0` if ran successfully, `1` if found a BARRIER, `-1` on error
 int dispatch_threads(pthread_t *threads, Ems_t *ems, int job_fd, int out_fd, 
-    unsigned long max_threads, unsigned int *thread_delays, char *thread_waits, 
-    pthread_mutex_t *parseMutex);
-
-void clean_threads(pthread_t *threads, unsigned int *thread_delays, char *thread_waits,
-  pthread_mutex_t *parseMutex);
+    unsigned long max_threads, unsigned int *thread_delays, char *thread_waits);
 
 void *process_commands(void *args);
 

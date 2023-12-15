@@ -1,22 +1,24 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <pthread.h>
 
 #include "constants.h"
-#include "operations.h"
 #include "eventlist.h"
+#include "operations.h"
 #include "parser.h"
-#include "utils.h"
 #include "threaded.h"
+#include "utils.h"
 
-int process_job(char *job_filepath, char *out_filepath, unsigned int access_delay, unsigned long max_threads) {
+int process_job(char *job_filepath, char *out_filepath, unsigned int access_delay,
+  unsigned long max_threads)
+{
   int job_fd = open(job_filepath, O_RDONLY);
   if (job_fd < 0) {
     fprintf(stderr, "Failed to open %s file\n", job_filepath);
@@ -31,7 +33,7 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
     close(out_fd);
     return EXIT_FAILURE;
   }
-  
+
   Ems_t ems = {NULL, 0};
   if (ems_init(&ems, access_delay)) {
     fprintf(stderr, "Failed to initialize EMS\n");
@@ -40,7 +42,7 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
     return EXIT_FAILURE;
   }
 
-  pthread_t *threads = (pthread_t*) malloc(sizeof(pthread_t) * max_threads);
+  pthread_t *threads = (pthread_t *) malloc(sizeof(pthread_t) * max_threads);
   if (NULL == threads) {
     fprintf(stderr, "Failed to allocate memory\n");
     ems_terminate(&ems);
@@ -49,9 +51,8 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
     return EXIT_FAILURE;
   }
 
-
-  char *thread_waits = (char*) malloc(sizeof(char) * max_threads);
-  unsigned int *thread_delays = (unsigned int*) malloc(sizeof(int) * max_threads);
+  char *thread_waits = (char *) malloc(sizeof(char) * max_threads);
+  unsigned int *thread_delays = (unsigned int *) malloc(sizeof(int) * max_threads);
 
   if (thread_waits == NULL || thread_delays == NULL) {
     fprintf(stderr, "Failed to allocat memory\n");
@@ -67,7 +68,7 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
     memset(thread_waits, 0, max_threads);
     memset(thread_delays, 0, max_threads);
 
-    job_status = dispatch_threads(threads, &ems, job_fd, out_fd, max_threads, 
+    job_status = dispatch_threads(threads, &ems, job_fd, out_fd, max_threads,
                                   thread_delays, thread_waits, &parseMutex);
     if (job_status < 0) {
       fprintf(stderr, "An error has occured processing the job file\n");
@@ -81,13 +82,12 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
   clean_threads(threads, thread_delays, thread_waits, &parseMutex);
 
   ems_terminate(&ems);
-  
+
   close(job_fd);
   close(out_fd);
 
   return EXIT_SUCCESS;
 }
-
 
 int main(int argc, char *argv[]) {
   unsigned int state_access_delay_ms = STATE_ACCESS_DELAY_MS;
@@ -101,8 +101,8 @@ int main(int argc, char *argv[]) {
   char *endptr;
 
   unsigned long max_proc = strtoul(argv[2], &endptr, 10);
-  if (*endptr != '\0' || max_proc > (unsigned long )sysconf(_SC_CHILD_MAX)
-      || max_proc <= 0) {
+  if (*endptr != '\0' || max_proc > (unsigned long)sysconf(_SC_CHILD_MAX) ||
+      max_proc <= 0) {
     fprintf(stderr, "Invalid max processes or value too large\n");
     return EXIT_FAILURE;
   }
@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
   while ((dir_entry = readdir(dir)) != NULL) {
     if (!strcmp(".", dir_entry->d_name) || !strcmp("..", dir_entry->d_name))
       continue;
-      
+
     char *ext = strchr(dir_entry->d_name, '.');
     if (NULL == ext || strcmp(JOBS_FILE_EXTENSION, strchr(dir_entry->d_name, '.')))
       continue;
@@ -150,9 +150,10 @@ int main(int argc, char *argv[]) {
     while (current_processes >= max_proc) {
       int status;
       pid_t pid_child = wait(&status);
-      
+
       if (pid_child > 0) {
-        printf("Job %s with PID=%d terminated with exit status %d\n", job_filepath, pid_child, WEXITSTATUS(status));
+        printf("Job %s with PID=%d terminated with exit status %d\n",
+               job_filepath, pid_child, WEXITSTATUS(status));
         current_processes--;
       }
     }
@@ -165,7 +166,8 @@ int main(int argc, char *argv[]) {
     // Child process
     if (pid == 0) {
       closedir(dir);
-      int exit_status = process_job(job_filepath, out_filepath, state_access_delay_ms, max_threads);
+      int exit_status = process_job(job_filepath, out_filepath, state_access_delay_ms,
+                                    max_threads);
       exit(exit_status);
     }
     // Parent process: keeping creating new processes
@@ -176,7 +178,8 @@ int main(int argc, char *argv[]) {
   int status;
   pid_t pid_child;
   while ((pid_child = wait(&status)) > 0) {
-    printf("Job with PID=%d terminated with exit status %d\n", pid_child, WEXITSTATUS(status));
+    printf("Job with PID=%d terminated with exit status %d\n", pid_child,
+            WEXITSTATUS(status));
   }
 
   return EXIT_SUCCESS;

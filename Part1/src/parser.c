@@ -135,7 +135,9 @@ enum Command get_next(int fd) {
   }
 }
 
-int parse_create(int fd, unsigned int *event_id, size_t *num_rows, size_t *num_cols) {
+int parse_create(int fd, unsigned int *event_id, size_t *num_rows,
+                 size_t *num_cols)
+{
   char ch;
 
   if (read_uint(fd, event_id, &ch) != 0 || ch != ' ') {
@@ -160,7 +162,9 @@ int parse_create(int fd, unsigned int *event_id, size_t *num_rows, size_t *num_c
   return 0;
 }
 
-size_t parse_reserve(int fd, size_t max, unsigned int *event_id, size_t *xs, size_t *ys) {
+size_t parse_reserve(int fd, size_t max, unsigned int *event_id, size_t *xs,
+                      size_t *ys)
+{
   char ch;
 
   if (read_uint(fd, event_id, &ch) != 0 || ch != ' ') {

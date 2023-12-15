@@ -16,7 +16,8 @@ int append_to_list(struct EventList *list, struct Event *event) {
   if (!list)
     return 1;
 
-  struct ListNode *new_node = (struct ListNode *)malloc(sizeof(struct ListNode));
+  struct ListNode *new_node =
+      (struct ListNode *)malloc(sizeof(struct ListNode));
   if (!new_node)
     return 1;
 

@@ -1,15 +1,14 @@
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <pthread.h>
 
 #include "constants.h"
 #include "eventlist.h"
-#include "utils.h"
 #include "operations.h"
-
+#include "utils.h"
 
 pthread_mutex_t file_Lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_rwlock_t eventList_Lock = PTHREAD_RWLOCK_INITIALIZER;
@@ -129,11 +128,13 @@ int ems_create(Ems_t *ems, unsigned int event_id, size_t num_rows, size_t num_co
     return EXIT_FAILURE;
   }
   pthread_rwlock_unlock(&eventList_Lock);
-  
+
   return EXIT_SUCCESS;
 }
 
-int ems_reserve(Ems_t *ems, unsigned int event_id, size_t num_seats, size_t *xs, size_t *ys) {
+int ems_reserve(Ems_t *ems, unsigned int event_id, size_t num_seats, size_t *xs, 
+                size_t *ys) 
+{
   pthread_rwlock_rdlock(&eventList_Lock);
   printf("RESERVING...\n");
   if (ems->event_list == NULL) {
@@ -154,7 +155,6 @@ int ems_reserve(Ems_t *ems, unsigned int event_id, size_t num_seats, size_t *xs,
 
   pthread_rwlock_wrlock(&event_Lock);
   unsigned int reservation_id = ++event->reservations;
-  //pthread_rwlock_unlock(&event_Lock);
 
   size_t i = 0;
   pthread_rwlock_wrlock(&seat_Lock);
@@ -166,13 +166,15 @@ int ems_reserve(Ems_t *ems, unsigned int event_id, size_t num_seats, size_t *xs,
       fprintf(stderr, "Invalid seat\n");
       break;
     }
-    unsigned int seat = *get_seat_with_delay(ems, event, seat_index(event, row, col));
+    unsigned int seat =
+        *get_seat_with_delay(ems, event, seat_index(event, row, col));
     if (seat != 0) {
       fprintf(stderr, "Seat already reserved\n");
       break;
     }
 
-    *get_seat_with_delay(ems, event, seat_index(event, row, col)) = reservation_id;
+    *get_seat_with_delay(ems, event, seat_index(event, row, col)) =
+        reservation_id;
   }
 
   // If the reservation was not successful, free the seats that were reserved.
@@ -216,8 +218,9 @@ int ems_show(Ems_t *ems, unsigned int event_id, int out_fd) {
   pthread_rwlock_rdlock(&seat_Lock);
   for (size_t i = 1; i <= event->rows; i++) {
     for (size_t j = 1; j <= event->cols; j++) {
-      unsigned int seat = *get_seat_with_delay(ems, event, seat_index(event, i, j));
-      
+      unsigned int seat =
+          *get_seat_with_delay(ems, event, seat_index(event, i, j));
+
       ssize_t added_bytes = snprintf(buffer + n_bytes, BUFSIZ - n_bytes, "%u", seat);
       if (added_bytes < 0) {
         fprintf(stderr, "Encoding error: could not add data to buffer\n");
@@ -225,7 +228,7 @@ int ems_show(Ems_t *ems, unsigned int event_id, int out_fd) {
         return EXIT_FAILURE;
       }
 
-      n_bytes += (size_t) added_bytes;
+      n_bytes += (size_t)added_bytes;
       if (j < event->cols) {
         buffer[n_bytes++] = ' ';
       }
@@ -273,17 +276,17 @@ int ems_list_events(Ems_t *ems, int out_fd) {
   if (ems->event_list->head == NULL) {
     strcpy(buffer, "No events\n");
     n_bytes = strlen("No events\n");
-  }
-  else {
+  } else {
     struct ListNode *current = ems->event_list->head;
     while (current != NULL) {
-      ssize_t added_bytes = snprintf(buffer + n_bytes, BUFSIZ - n_bytes, "Event: %u\n", (current->event)->id);
+      ssize_t added_bytes = snprintf(buffer + n_bytes, BUFSIZ - n_bytes,
+                                     "Event: %u\n", (current->event)->id);
       if (added_bytes < 0) {
         fprintf(stderr, "Encoding error: could not add data to buffer\n");
         pthread_rwlock_unlock(&eventList_Lock);
         return EXIT_FAILURE;
       }
-      n_bytes += (size_t) added_bytes;
+      n_bytes += (size_t)added_bytes;
 
       if (BUFSIZ - n_bytes <= BUFFER_FLUSH_THOLD) {
         if (!flushes) {

@@ -1,12 +1,12 @@
 #ifndef EMS_OPERATIONS_H
 #define EMS_OPERATIONS_H
 
-#include <stddef.h>
 #include "eventlist.h"
+#include <stddef.h>
 
 typedef struct Ems {
-    struct EventList *event_list;
-    unsigned int state_access_delay_ms;
+  struct EventList *event_list;
+  unsigned int state_access_delay_ms;
 } Ems_t;
 
 /// Initializes the EMS state.
@@ -33,7 +33,8 @@ int ems_create(Ems_t *ems, unsigned int event_id, size_t num_rows, size_t num_co
 /// @param xs Array of rows of the seats to reserve.
 /// @param ys Array of columns of the seats to reserve.
 /// @return 0 if the reservation was created successfully, 1 otherwise.
-int ems_reserve(Ems_t *ems, unsigned int event_id, size_t num_seats, size_t *xs, size_t *ys);
+int ems_reserve(Ems_t *ems, unsigned int event_id, size_t num_seats, size_t *xs,
+                size_t *ys);
 
 /// Outputs the given event to the file descriptor.
 /// @param ems The EMS data structure
@@ -47,6 +48,5 @@ int ems_show(Ems_t *ems, unsigned int event_id, int out_fd);
 /// @param out_fd Output file descriptor
 /// @return 0 if the events were printed successfully, 1 otherwise.
 int ems_list_events(Ems_t *ems, int out_fd);
-
 
 #endif // EMS_OPERATIONS_H

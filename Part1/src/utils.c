@@ -1,8 +1,8 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <stdio.h>
 #include <time.h>
+#include <unistd.h>
 
 void get_job_paths(char *job_file, char *out_file, char *dir, char *filename) {
   strcpy(job_file, dir);
@@ -25,7 +25,7 @@ int safe_write(int out_fd, const void *buffer, size_t n_bytes) {
       fprintf(stderr, "Could not write to .out file\n");
       return 1;
     }
-    n_bytes -= (size_t) wbytes;
+    n_bytes -= (size_t)wbytes;
     completed_bytes += wbytes;
   }
   return EXIT_SUCCESS;

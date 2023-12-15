@@ -9,15 +9,14 @@
 /// @param out_filepath Path for the .out file.
 /// @param dir Jobs directory name.
 /// @param filename File named read from readdir().
-void get_job_paths(char *job_filepath, char *out_filepath, char *dir, char *filename);
-
+void get_job_paths(char *job_filepath, char *out_filepath, char *dir,
+                   char *filename);
 
 /// Writes N_BYTES from BUFFER to OUT_FD. Checks for partial writes
 /// @param out_fd Output file descriptor
 /// @param buffer Buffer
 /// @param n_bytes N bytes to write.
 int safe_write(int out_fd, const void *buffer, size_t n_bytes);
-
 
 /// Calculates a timespec from a delay in milliseconds.
 /// @param delay_ms Delay in milliseconds.

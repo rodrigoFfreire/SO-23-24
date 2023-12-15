@@ -154,7 +154,7 @@ int ems_reserve(Ems_t *ems, unsigned int event_id, size_t num_seats, size_t *xs,
 
   pthread_rwlock_wrlock(&event_Lock);
   unsigned int reservation_id = ++event->reservations;
-  pthread_rwlock_unlock(&event_Lock);
+  //pthread_rwlock_unlock(&event_Lock);
 
   size_t i = 0;
   pthread_rwlock_wrlock(&seat_Lock);
@@ -177,15 +177,15 @@ int ems_reserve(Ems_t *ems, unsigned int event_id, size_t num_seats, size_t *xs,
 
   // If the reservation was not successful, free the seats that were reserved.
   if (i < num_seats) {
-    pthread_rwlock_wrlock(&event_Lock);
     event->reservations--;
-    pthread_rwlock_unlock(&event_Lock);
     for (size_t j = 0; j < i; j++) {
       *get_seat_with_delay(ems, event, seat_index(event, xs[j], ys[j])) = 0;
     }
     pthread_rwlock_unlock(&seat_Lock);
+    pthread_rwlock_unlock(&event_Lock);
     return EXIT_FAILURE;
   }
+  pthread_rwlock_unlock(&event_Lock);
   pthread_rwlock_unlock(&seat_Lock);
 
   return EXIT_SUCCESS;

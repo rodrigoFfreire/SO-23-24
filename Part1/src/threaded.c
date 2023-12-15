@@ -132,14 +132,7 @@ void *process_commands(void *args) {
   while (!eof) {
     pthread_mutex_lock(th_mgr->parseMutex);
 
-    if (*(th_mgr->barrier)) {   // check if barrrier flag is true
-      pthread_mutex_unlock(th_mgr->parseMutex);
-      *return_value = THREAD_FOUND_BARRIER;
-
-      pthread_exit((void*) return_value);
-    }
-
-    if (th_mgr->thread_waits[tid]) {
+    if (th_mgr->thread_waits[tid] && !(*(th_mgr->barrier))) {
       printf("Waiting...\n"); // Remove this later
       th_mgr->thread_waits[tid] = 0;
       delay = th_mgr->thread_delays[tid];
@@ -147,11 +140,16 @@ void *process_commands(void *args) {
 
       pthread_mutex_unlock(th_mgr->parseMutex);
       thread_wait(delay);
-    } else {
-      pthread_mutex_unlock(th_mgr->parseMutex);
+      pthread_mutex_lock(th_mgr->parseMutex);
     }
 
-    pthread_mutex_lock(th_mgr->parseMutex);
+    if (*(th_mgr->barrier)) {   // check if barrrier flag is true
+      pthread_mutex_unlock(th_mgr->parseMutex);
+      *return_value = THREAD_FOUND_BARRIER;
+
+      pthread_exit((void*) return_value);
+    }
+
     switch (get_next(job_fd)) {
       case CMD_CREATE:
         if (parse_create(job_fd, &event_id, &num_rows, &num_columns) != 0) {
@@ -240,7 +238,7 @@ void *process_commands(void *args) {
       case CMD_BARRIER:
         *(th_mgr->barrier) = 1;
         pthread_mutex_unlock(th_mgr->parseMutex);
-
+        
         *return_value = THREAD_FOUND_BARRIER;
         pthread_exit((void*) return_value);
 

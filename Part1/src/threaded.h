@@ -20,6 +20,7 @@ typedef struct ThreadManager {
     unsigned int *thread_delays; 
     char *thread_waits;
     char *barrier;
+    pthread_mutex_t *parseMutex;
 } ThreadManager_t;
 
 /// Processes the job file with `max_threads` threads
@@ -32,10 +33,12 @@ typedef struct ThreadManager {
 /// @param thread_waits Array that contains the WAIT flag for each thread
 /// @return `0` if ran successfully, `1` if found a BARRIER, `-1` on error
 int dispatch_threads(pthread_t *threads, Ems_t *ems, int job_fd, int out_fd, 
-    unsigned long max_threads, unsigned int *thread_delays, char *thread_waits);
+    unsigned long max_threads, unsigned int *thread_delays, char *thread_waits,
+    pthread_mutex_t *parseMutex);
 
 void *process_commands(void *args);
 
-void clean_threads(pthread_t *threads, unsigned int *thread_delays, char *thread_waits);
+void clean_threads(pthread_t *threads, unsigned int *thread_delays, char *thread_waits,
+  pthread_mutex_t *parseMutex);
 
 #endif // EMS_THREADED_H

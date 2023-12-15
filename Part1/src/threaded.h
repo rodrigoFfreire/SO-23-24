@@ -22,7 +22,6 @@ typedef struct ThreadManager {
     char *barrier;
 } ThreadManager_t;
 
-
 /// Processes the job file with `max_threads` threads
 /// @param threads The thread array
 /// @param ems Event Management System data structure
@@ -37,5 +36,6 @@ int dispatch_threads(pthread_t *threads, Ems_t *ems, int job_fd, int out_fd,
 
 void *process_commands(void *args);
 
+void clean_threads(pthread_t *threads, unsigned int *thread_delays, char *thread_waits);
 
 #endif // EMS_THREADED_H

@@ -75,10 +75,7 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
       return EXIT_FAILURE;
     }
   }
-
-  free(thread_delays);
-  free(thread_waits);
-  free(threads);
+  clean_threads(threads, thread_delays, thread_waits);
 
   ems_terminate(&ems);
   

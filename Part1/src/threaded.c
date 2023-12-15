@@ -105,6 +105,11 @@ int dispatch_threads(pthread_t *threads, Ems_t *ems, int job_fd, int out_fd,
   return THREAD_SUCCESS;
 }
 
+void clean_threads(pthread_t *threads, unsigned int *thread_delays, char *thread_waits) {
+  free(threads);
+  free(thread_delays);
+  free(thread_waits);
+}
 
 void *process_commands(void *args) {
   ThreadManager_t *th_mgr = (ThreadManager_t*) args;
@@ -213,7 +218,6 @@ void *process_commands(void *args) {
         pthread_mutex_unlock(&parseMutex);
 
         break;
-
       case CMD_INVALID:
         pthread_mutex_unlock(&parseMutex);
         fprintf(stderr, "Invalid command. See HELP for usage\n");

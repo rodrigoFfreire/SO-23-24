@@ -66,7 +66,7 @@ int process_job(char *job_filepath, char *out_filepath, unsigned int access_dela
   pthread_mutex_t parseMutex = PTHREAD_MUTEX_INITIALIZER;
   while (job_status == THREAD_FOUND_BARRIER) {
     memset(thread_waits, 0, max_threads);
-    memset(thread_delays, 0, max_threads);
+    memset(thread_delays, 0, max_threads * sizeof(int));
 
     job_status = dispatch_threads(threads, &ems, job_fd, out_fd, max_threads,
                                   thread_delays, thread_waits, &parseMutex);

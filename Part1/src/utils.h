@@ -9,7 +9,7 @@
 void get_job_paths(char *job_filepath, char *out_filepath, char *dir, char *filename);
 
 
-/// Writes N_BYTES from BUFFER to OUT_FD
+/// Writes N_BYTES from BUFFER to OUT_FD. Checks for partial writes
 /// @param out_fd Output file descriptor
 /// @param buffer Buffer
 /// @param n_bytes N bytes to write.

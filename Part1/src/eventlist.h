@@ -4,14 +4,11 @@
 #include <stddef.h>
 
 struct Event {
-  unsigned int id;           /// Event id
+  unsigned int id; /// Event id
   unsigned int reservations; /// Number of reservations for the event.
-
+  unsigned int *data; /// Array of size rows * cols with the reservations for each seat.
   size_t cols; /// Number of columns.
   size_t rows; /// Number of rows.
-
-  unsigned int
-      *data; /// Array of size rows * cols with the reservations for each seat.
 };
 
 struct ListNode {

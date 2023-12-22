@@ -1,7 +1,8 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
-#include <stdio.h>
 
 void get_job_paths(char *job_file, char *out_file, char *dir, char *filename) {
   strcpy(job_file, dir);
@@ -15,7 +16,7 @@ void get_job_paths(char *job_file, char *out_file, char *dir, char *filename) {
   }
 }
 
-int utilwrite(int out_fd, const void *buffer, size_t n_bytes) {
+int safe_write(int out_fd, const void *buffer, size_t n_bytes) {
   ssize_t completed_bytes = 0;
   while (n_bytes > 0) {
     ssize_t wbytes = write(out_fd, buffer + completed_bytes, n_bytes);
@@ -24,8 +25,16 @@ int utilwrite(int out_fd, const void *buffer, size_t n_bytes) {
       fprintf(stderr, "Could not write to .out file\n");
       return 1;
     }
+<<<<<<< HEAD
     n_bytes -= (size_t) wbytes;
+=======
+    n_bytes -= (size_t)wbytes;
+>>>>>>> ex3
     completed_bytes += wbytes;
   }
-  return 0;
+  return EXIT_SUCCESS;
+}
+
+struct timespec delay_to_timespec(unsigned int delay_ms) {
+  return (struct timespec){delay_ms / 1000, (delay_ms % 1000) * 1000000};
 }

@@ -27,7 +27,8 @@ enum Command get_next(int fd);
 /// @param num_rows Pointer to the variable to store the number of rows in.
 /// @param num_cols Pointer to the variable to store the number of columns in.
 /// @return 0 if the command was parsed successfully, 1 otherwise.
-int parse_create(int fd, unsigned int *event_id, size_t *num_rows, size_t *num_cols);
+int parse_create(int fd, unsigned int *event_id, size_t *num_rows,
+                 size_t *num_cols);
 
 /// Parses a RESERVE command.
 /// @param fd File descriptor to read from.
@@ -36,7 +37,8 @@ int parse_create(int fd, unsigned int *event_id, size_t *num_rows, size_t *num_c
 /// @param xs Pointer to the array to store the X coordinates in.
 /// @param ys Pointer to the array to store the Y coordinates in.
 /// @return Number of coordinates read. 0 on failure.
-size_t parse_reserve(int fd, size_t max, unsigned int *event_id, size_t *xs, size_t *ys);
+size_t parse_reserve(int fd, size_t max, unsigned int *event_id, size_t *xs,
+                     size_t *ys);
 
 /// Parses a SHOW command.
 /// @param fd File descriptor to read from.

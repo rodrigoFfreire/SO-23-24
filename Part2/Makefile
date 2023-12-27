@@ -4,8 +4,7 @@ CC = gcc
 CFLAGS = -g -std=c17 -D_POSIX_C_SOURCE=200809L -I. \
 		 -Wall -Wextra \
 		 -Wcast-align -Wconversion -Wfloat-equal -Wformat=2 -Wnull-dereference -Wshadow -Wsign-conversion -Wswitch-enum -Wundef -Wunreachable-code -Wunused \
-		 -pthread
-# -fsanitize=address -fsanitize=undefined 
+		 -pthread -fsanitize=address -fsanitize=undefined 
 
 
 ifneq ($(shell uname -s),Darwin) # if not MacOS
@@ -14,7 +13,7 @@ endif
 
 all: server/ems client/client
 
-server/ems: common/io.o common/constants.h server/main.c server/operations.o server/eventlist.o
+server/ems: common/io.o common/constants.h server/main.c server/operations.o server/eventlist.o server/queue.o
 	$(CC) $(CFLAGS) $(SLEEP) -o $@ $^
 
 client/client: common/io.o client/main.c client/api.o client/parser.o

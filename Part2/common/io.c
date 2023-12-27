@@ -86,6 +86,8 @@ int safe_read(int fd, void *buf, size_t nbytes) {
 
     if (rd_bytes < 0)
       return -1;
+    else if (rd_bytes == 0)
+      break;
 
     total_bytes_read += (size_t) rd_bytes;
   }

@@ -77,3 +77,18 @@ int print_str(int fd, const char *str) {
 
   return 0;
 }
+
+int safe_read(int fd, void *buf, size_t nbytes) {
+  size_t total_bytes_read = 0;
+
+  while (total_bytes_read < nbytes) {
+    ssize_t rd_bytes = read(fd, buf, nbytes);
+
+    if (rd_bytes < 0)
+      return -1;
+
+    total_bytes_read += (size_t) rd_bytes;
+  }
+
+  return 0;
+}

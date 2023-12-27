@@ -1,6 +1,8 @@
 #ifndef COMMON_IO_H
 #define COMMON_IO_H
 
+#include <sys/types.h>
+
 /// Parses an unsigned integer from the given file descriptor.
 /// @param fd The file descriptor to read from.
 /// @param value Pointer to the variable to store the value in.
@@ -19,5 +21,12 @@ int print_uint(int fd, unsigned int value);
 /// @param str The string to write.
 /// @return 0 if the string was written successfully, 1 otherwise.
 int print_str(int fd, const char *str);
+
+/// Safely reads nbytes from the given file descriptor to buf
+/// @param fd File descriptor to read from
+/// @param buf Buffer to hold read data
+/// @param nbytes Amount of data to read
+/// @return 0 if data was read successfully, -1 otherwise.
+int safe_read(int fd, void *buf, size_t nbytes);
 
 #endif  // COMMON_IO_H

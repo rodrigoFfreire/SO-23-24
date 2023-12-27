@@ -3,11 +3,12 @@
 .DS_STORE
 .vscode
 submission
-
-# Binaries, objects, jobs, tests
 jobs
 results
+test
+
+# Binaries, objects, ...
 *.dSYM
 *.o
 ems
-test
+client

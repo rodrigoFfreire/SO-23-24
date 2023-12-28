@@ -11,7 +11,7 @@
 #include "common/io.h"
 #include "operations.h"
 #include "queue.h"
-#include "connections.h"
+#include "sessions.h"
 
 volatile sig_atomic_t terminate = 0;
 
@@ -63,13 +63,13 @@ int main(int argc, char* argv[]) {
   }
 
   pthread_t worker_threads[MAX_SESSION_COUNT];
-  ThreadManager_t th_mgr[MAX_SESSION_COUNT];
+  Session_t sessions[MAX_SESSION_COUNT];
 
   for (unsigned int i = 0; i < MAX_SESSION_COUNT; i++) {
-    th_mgr[i].session_id = i;
-    th_mgr[i].queue = &connect_queue;
+    sessions[i].session_id = i;
+    sessions[i].queue = &connect_queue;
 
-    if (pthread_create(&worker_threads[i], NULL, connect_clients, (void*)&th_mgr[i]) != 0) {
+    if (pthread_create(&worker_threads[i], NULL, connect_clients, (void*)&sessions[i]) != 0) {
       fprintf(stderr, "Failed to dispatch worker thread\n");
       return 1;
     }

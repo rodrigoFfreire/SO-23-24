@@ -3,8 +3,13 @@
 
 #include <pthread.h>
 #include "common/constants.h"
-#include "connections.h"
 
+
+typedef struct Connection {
+    char req_pipe_path[MAX_PIPE_NAME_SIZE];
+    char resp_pipe_path[MAX_PIPE_NAME_SIZE];
+    struct Connection* next; 
+} Connection_t;
 
 typedef struct ConnectionQueue {
     Connection_t *front, *rear;

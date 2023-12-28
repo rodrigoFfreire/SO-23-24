@@ -6,7 +6,6 @@
 #include <fcntl.h>
 
 #include "queue.h"
-#include "connections.h"
 #include "common/constants.h"
 
 int init_queue(ConnectionQueue_t *queue) {

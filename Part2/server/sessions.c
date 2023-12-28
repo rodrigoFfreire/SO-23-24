@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <string.h>
 
 #include "queue.h"
 #include "sessions.h"
@@ -20,7 +21,7 @@ int check_termination(ConnectionQueue_t *queue) {
 
 void *connect_clients(void *args) {
   Session_t session_info = *(Session_t*)args;
-  unsigned int session_id = session_info.session_id;
+  // unsigned int session_id = session_info.session_id; shutup compiler unused var
   ConnectionQueue_t *queue = session_info.queue;
 
   char req_pipe_path[MAX_PIPE_NAME_SIZE];

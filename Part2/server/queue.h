@@ -25,8 +25,4 @@ int enqueue_connection(ConnectionQueue_t *queue, const char* setup_buffer);
 
 Connection_t *dequeue_connection(ConnectionQueue_t *queue);
 
-void *connect_clients(void *args);
-
-int check_termination(ConnectionQueue_t *queue);
-
 #endif

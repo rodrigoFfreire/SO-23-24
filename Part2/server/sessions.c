@@ -21,7 +21,7 @@ int check_termination(ConnectionQueue_t *queue) {
 
 void *connect_clients(void *args) {
   Session_t session_info = *(Session_t*)args;
-  // unsigned int session_id = session_info.session_id; shutup compiler unused var
+  unsigned int session_id = session_info.session_id;
   ConnectionQueue_t *queue = session_info.queue;
 
   char req_pipe_path[MAX_PIPE_NAME_SIZE];
@@ -53,7 +53,9 @@ void *connect_clients(void *args) {
     memcpy(resp_pipe_path, connection->resp_pipe_path, MAX_PIPE_NAME_SIZE);
     free(connection);
 
-    // TODO: Interact with client
+    fprintf(stdout, "\x1b[1;94m[WORKER %.2u] Connected to Client!\n", session_id);
+    sleep(4);
+    fprintf(stdout, "\x1b[1;94m[WORKER %.2u] Client disconnected [JOB DONE]\n", session_id);
   }
 
   return NULL;

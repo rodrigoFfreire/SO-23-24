@@ -106,14 +106,14 @@ int main(int argc, char* argv[]) {
 
   for (unsigned int i = 0; i < MAX_SESSION_COUNT; i++) {
     pthread_join(worker_threads[i], NULL);
-    fprintf(stdout, "[WORKER-THREAD %u]: Terminated!\n", i);
+    fprintf(stdout, "\x1b[1;96m[WORKER %.2u]: Terminated!\n", i);
   }
   
   close(rx_register);
   unlink(reg_pipe_path);
   free_queue(&connect_queue);
   ems_terminate();
-  fprintf(stdout, "[SERVER]: Terminated!\n");
+  fprintf(stdout, "\x1b[1;95m[SERVER]: Terminated!\n");
 
   return 0;
 }

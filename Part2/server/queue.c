@@ -31,6 +31,7 @@ void free_queue(ConnectionQueue_t *queue) {
   while (curr_node != NULL) {
     next_node = curr_node->next;
     free(curr_node);
+    fprintf(stdout, "\x1b[1;91m[SERVER]: Rejected Connection [Closing Server]\n");
     curr_node = next_node;
   }
   queue->front = queue->rear = NULL;

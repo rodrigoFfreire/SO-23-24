@@ -4,7 +4,7 @@
 #include <fcntl.h>
 
 #include "queue.h"
-#include "connections.h"
+#include "sessions.h"
 
 
 int check_termination(ConnectionQueue_t *queue) {

@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
       break;
 
     char setup_buffer[SETUP_REQUEST_BUFSIZ] = {0};
-    if (safe_read(rx_register, setup_buffer, SETUP_REQUEST_BUFSIZ)) {
+    if (safe_read(rx_register, setup_buffer, SETUP_REQUEST_BUFSIZ) < 0) {
       fprintf(stderr, "Failed reading from register pipe\n");
       return 1;
     }

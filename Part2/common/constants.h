@@ -9,7 +9,13 @@
 #define SETUP_REQUEST_BUFSIZ 82
 
 enum OpCodes {
-    OP_SETUP = 1, OP_QUIT, OP_CREATE, OP_RESERVE, OP_SHOW, OP_LIST
+    OP_NONE,
+    OP_SETUP,
+    OP_QUIT,
+    OP_CREATE,
+    OP_RESERVE,
+    OP_SHOW,
+    OP_LIST
 };
 
 #endif

@@ -78,19 +78,38 @@ int print_str(int fd, const char *str) {
   return 0;
 }
 
-int safe_read(int fd, void *buf, size_t nbytes) {
-  size_t total_bytes_read = 0;
+ssize_t safe_read(int fd, void *buf, size_t nbytes) {
+  ssize_t completed_bytes = 0;
 
-  while (total_bytes_read < nbytes) {
-    ssize_t rd_bytes = read(fd, buf, nbytes);
+  while (nbytes > 0) {
+    ssize_t rd_bytes = read(fd, buf + completed_bytes, nbytes);
 
     if (rd_bytes < 0)
       return -1;
     else if (rd_bytes == 0)
       break;
 
-    total_bytes_read += (size_t) rd_bytes;
+    nbytes -= (size_t) rd_bytes;
+    completed_bytes += rd_bytes;
   }
 
-  return 0;
+  return completed_bytes;
+}
+
+ssize_t safe_write(int fd, const void *buf, size_t nbytes) {
+  ssize_t completed_bytes = 0;
+
+  while (nbytes > 0) {
+    ssize_t wr_bytes = write(fd, buf + completed_bytes, nbytes);
+
+    if (wr_bytes < 0)
+      return -1;
+    else if (wr_bytes == 0)
+      break;
+
+    nbytes -= (size_t) wr_bytes;
+    completed_bytes += wr_bytes;
+  }
+  
+  return completed_bytes;
 }

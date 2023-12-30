@@ -27,6 +27,13 @@ int print_str(int fd, const char *str);
 /// @param buf Buffer to hold read data
 /// @param nbytes Amount of data to read
 /// @return 0 if data was read successfully, -1 otherwise.
-int safe_read(int fd, void *buf, size_t nbytes);
+ssize_t safe_read(int fd, void *buf, size_t nbytes);
+
+/// Safely writes nbytes to the given file descriptor from buf
+/// @param fd File descriptor to write to
+/// @param buf Buffer to hold write data
+/// @param nbytes Amount of data to read
+/// @return 0 if data was written successfully, -1 otherwise.
+ssize_t safe_write(int fd, const void *buf, size_t nbytes);
 
 #endif  // COMMON_IO_H

@@ -9,6 +9,7 @@
 
 static struct EventList* event_list = NULL;
 static unsigned int state_access_delay_us = 0;
+static size_t num_events = 0;
 
 /// Gets the event with the given ID from the state.
 /// @note Will wait to simulate a real system accessing a costly memory resource.
@@ -110,6 +111,7 @@ int ems_create(unsigned int event_id, size_t num_rows, size_t num_cols) {
     return 1;
   }
 
+  num_events++;
   pthread_rwlock_unlock(&event_list->rwl);
   return 0;
 }
@@ -198,6 +200,12 @@ int ems_show(int out_fd, unsigned int event_id) {
     return 1;
   }
 
+  size_t event_size[2] = {event->rows, event->cols};
+  if (safe_write(out_fd, &event_size, 2 * sizeof(size_t)) < 0) {
+    perror("Error writing to file descriptor");
+    return 1;
+  }
+
   for (size_t i = 1; i <= event->rows; i++) {
     for (size_t j = 1; j <= event->cols; j++) {
       char buffer[16];
@@ -242,6 +250,12 @@ int ems_list_events(int out_fd) {
 
   struct ListNode* to = event_list->tail;
   struct ListNode* current = event_list->head;
+
+  if (safe_write(out_fd, &num_events, sizeof(size_t)) < 0) {
+    perror("Error writing to file descriptor");
+    pthread_rwlock_unlock(&event_list->rwl);
+    return 1;
+  }
 
   if (current == NULL) {
     char buff[] = "No events\n";

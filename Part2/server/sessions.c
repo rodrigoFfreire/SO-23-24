@@ -3,6 +3,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <errno.h>
+#include <signal.h>
 
 #include "queue.h"
 #include "sessions.h"
@@ -21,12 +23,23 @@ int check_termination(ConnectionQueue_t *queue) {
 }
 
 int read_requests(int req_fd, int resp_fd) {
+  sigset_t mask;
   char op = OP_NONE;
-  int return_value = 0;
+  int response_status = 0;
+  ssize_t io_status;
+
+  sigemptyset(&mask);
+  sigaddset(&mask, SIGPIPE);
+  if (pthread_sigmask(SIG_BLOCK, &mask, NULL) != 0) {
+    fprintf(stderr, "Failed creating signal mask\n");
+    return JOB_FAILED;
+  }
 
   while (op != OP_QUIT) {
-    if (safe_read(req_fd, &op, sizeof(char)) < 0) {
-      return 1;
+    if ((io_status = safe_read(req_fd, &op, sizeof(char))) <= 0) {
+      if (!io_status)
+        return UNRESPONSIVE_CLIENT;
+      return JOB_FAILED;
     }
 
     switch (op) {
@@ -35,56 +48,79 @@ int read_requests(int req_fd, int resp_fd) {
 
     case OP_CREATE:
       char c_buf[CREATE_BUFSIZE];
-      if (safe_read(req_fd, c_buf + sizeof(char), CREATE_BUFSIZE - 1) < 0)
-        return 1;
+      if ((io_status = safe_read(req_fd, c_buf + sizeof(char), CREATE_BUFSIZE - 1)) <= 0) {
+        if (!io_status)
+          return UNRESPONSIVE_CLIENT;
+        return JOB_FAILED;
+      }
 
-      return_value = ems_create(*(unsigned int*)(c_buf + sizeof(int)),
+      response_status = ems_create(*(unsigned int*)(c_buf + sizeof(int)),
                                 *(size_t*)(c_buf + sizeof(size_t)), 
                                 *(size_t*)(c_buf + 2 * sizeof(size_t)));
       
-      if (safe_write(resp_fd, &return_value, sizeof(int)) < 0) {
-        return 1;
+      if (safe_write(resp_fd, &response_status, sizeof(int)) < 0) {
+        if (errno == EPIPE)
+          return UNRESPONSIVE_CLIENT;
+        return JOB_FAILED;
       }
       
       break;
 
     case OP_RESERVE:
       char r_buf[RESERVE_BUFSIZE];
-      if (safe_read(req_fd, r_buf + sizeof(char), 2 * sizeof(int) + sizeof(size_t) - 1) < 0)
-        return 1;
+      if ((io_status = safe_read(req_fd, r_buf + sizeof(char), 2 * sizeof(int) + sizeof(size_t) - 1)) <= 0) {
+        if (!io_status)
+          return UNRESPONSIVE_CLIENT;
+        return JOB_FAILED;
+      }
 
       size_t num_seats = *(size_t*)(r_buf + sizeof(size_t));
 
-      if (safe_read(req_fd, r_buf + 2 * sizeof(size_t), 2 * num_seats * sizeof(size_t)) < 0)
-        return 1;
+      if ((io_status = safe_read(req_fd, r_buf + 2 * sizeof(size_t), 2 * num_seats * sizeof(size_t))) <= 0) {
+        if (!io_status)
+          return UNRESPONSIVE_CLIENT;
+        return JOB_FAILED;
+      }
 
-      return_value = ems_reserve(*(unsigned int*)(r_buf + sizeof(int)),
+      response_status = ems_reserve(*(unsigned int*)(r_buf + sizeof(int)),
                                 num_seats,
                                 (size_t*)(r_buf + 2 * sizeof(size_t)),
                                 (size_t*)(r_buf + sizeof(size_t) * (num_seats + 2)));
 
-      if (safe_write(resp_fd, &return_value, sizeof(int)) < 0)
-        return 1;
+      if (safe_write(resp_fd, &response_status, sizeof(int)) < 0) {
+        if (errno == EPIPE)
+          return UNRESPONSIVE_CLIENT;
+        return JOB_FAILED;
+      }
 
       break;
 
     case OP_SHOW:
       char s_buf[SHOW_BUFSIZE];
-      if (safe_read(req_fd, s_buf + sizeof(char), SHOW_BUFSIZE - 1) < 0)
-        return 1;
+      if ((io_status = safe_read(req_fd, s_buf + sizeof(char), SHOW_BUFSIZE - 1)) < 0) {
+        if (!io_status)
+          return UNRESPONSIVE_CLIENT;
+        return JOB_FAILED;
+      }
 
-      return_value = ems_show(resp_fd, *(unsigned int*)(s_buf + sizeof(int)));
+      response_status = ems_show(resp_fd, *(unsigned int*)(s_buf + sizeof(int)));
 
-      if (safe_write(resp_fd, &return_value, sizeof(int)) < 0)
-        return 1;
+      if (safe_write(resp_fd, &response_status, sizeof(int)) < 0) {
+        if (errno == EPIPE)
+          return UNRESPONSIVE_CLIENT;
+        return JOB_FAILED;
+      }
 
       break;
 
     case OP_LIST:
-      return_value = ems_list_events(resp_fd);
+      response_status = ems_list_events(resp_fd);
 
-      if (safe_write(resp_fd, &return_value, sizeof(int)) < 0)
-        return 1;
+      if (safe_write(resp_fd, &response_status, sizeof(int)) < 0) {
+        if (errno == EPIPE)
+          return UNRESPONSIVE_CLIENT;
+        return JOB_FAILED;
+      }
 
       break;
     
@@ -93,7 +129,7 @@ int read_requests(int req_fd, int resp_fd) {
     }
   }
   
-  return 0;
+  return JOB_SUCCESS;
 }
 
 void *connect_clients(void *args) {
@@ -130,7 +166,7 @@ void *connect_clients(void *args) {
     memcpy(resp_pipe_path, connection->resp_pipe_path, MAX_PIPE_NAME_SIZE);
     free(connection);
 
-    fprintf(stdout, "\x1b[1;94m[WORKER %.2u] Connected to Client!\n", session_id);
+    fprintf(stdout, "\x1b[1;94m[WORKER %.2u] Connected to Client!\x1b[0m\n", session_id);
 
     int resp_pipe = open(resp_pipe_path, O_WRONLY);
     if (resp_pipe < 0) {
@@ -151,8 +187,13 @@ void *connect_clients(void *args) {
       continue;
     }
 
-    if (read_requests(req_pipe, resp_pipe)) {
-      fprintf(stderr, "Failed reading client requests\n");
+    int job_status = read_requests(req_pipe, resp_pipe);
+    if (job_status) {
+      if (job_status == JOB_FAILED)
+        fprintf(stderr, "Failed reading client requests\n");
+      else if (job_status == UNRESPONSIVE_CLIENT)
+        fprintf(stderr, "\x1b[1;91m[WORKER %.2u] Client is unresponsive. Terminating Session...\x1b[0m\n", session_id);
+
       close(resp_pipe);
       close(req_pipe);
       continue;
@@ -160,7 +201,7 @@ void *connect_clients(void *args) {
 
     close(req_pipe);
     close(resp_pipe);
-    fprintf(stdout, "\x1b[1;94m[WORKER %.2u] Client disconnected [JOB DONE]\n", session_id);
+    fprintf(stdout, "\x1b[1;94m[WORKER %.2u] Job successfully completed. Terminating Session...\x1b[0m\n", session_id);
   }
 
   return NULL;

@@ -75,8 +75,8 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  int rx_register = open(reg_pipe_path, O_RDONLY);
-  if (rx_register < 0 ) {
+  int register_pipe = open(reg_pipe_path, O_RDONLY);
+  if (register_pipe < 0 ) {
     fprintf(stderr, "Failed to open register pipe\n");
     return 1;
   }
@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
       break;
 
     char setup_buffer[SETUP_REQUEST_BUFSIZ] = {0};
-    if (safe_read(rx_register, setup_buffer, SETUP_REQUEST_BUFSIZ) < 0) {
+    if (safe_read(register_pipe, setup_buffer, SETUP_REQUEST_BUFSIZ) < 0) {
       fprintf(stderr, "Failed reading from register pipe\n");
       return 1;
     }
@@ -106,14 +106,14 @@ int main(int argc, char* argv[]) {
 
   for (unsigned int i = 0; i < MAX_SESSION_COUNT; i++) {
     pthread_join(worker_threads[i], NULL);
-    fprintf(stdout, "\x1b[1;96m[WORKER %.2u]: Terminated!\n", i);
+    fprintf(stdout, "\x1b[1;94m[WORKER %.2u]: Terminated!\x1b[0m\n", i);
   }
   
-  close(rx_register);
+  close(register_pipe);
   unlink(reg_pipe_path);
   free_queue(&connect_queue);
   ems_terminate();
-  fprintf(stdout, "\x1b[1;95m[SERVER]: Terminated!\n");
+  fprintf(stdout, "\x1b[1;95m[SERVER]: Terminated!\x1b[0m\n");
 
   return 0;
 }

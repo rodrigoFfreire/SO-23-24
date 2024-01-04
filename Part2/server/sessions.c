@@ -24,16 +24,18 @@ int check_termination(ConnectionQueue_t *queue) {
 
 int read_requests(int req_fd, int resp_fd) {
   sigset_t mask;
-  char op = OP_NONE;
-  int response_status = 0;
-  ssize_t io_status;
-
   sigemptyset(&mask);
   sigaddset(&mask, SIGPIPE);
-  if (pthread_sigmask(SIG_BLOCK, &mask, NULL) != 0) {
+  sigaddset(&mask, SIGUSR1);
+  
+  if (pthread_sigmask(SIG_BLOCK, &mask, NULL)) {
     fprintf(stderr, "Failed creating signal mask\n");
     return JOB_FAILED;
   }
+
+  char op = OP_NONE;
+  int response_status = 0;
+  ssize_t io_status;
 
   while (op != OP_QUIT) {
     if ((io_status = safe_read(req_fd, &op, sizeof(char))) <= 0) {

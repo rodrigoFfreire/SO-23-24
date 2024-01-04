@@ -22,6 +22,7 @@ struct ListNode {
 
 // Linked list structure
 struct EventList {
+  size_t event_num;
   struct ListNode* head;  // Head of the list
   struct ListNode* tail;  // Tail of the list
   pthread_rwlock_t rwl;   // Mutex to protect the list

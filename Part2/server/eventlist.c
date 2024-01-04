@@ -12,6 +12,7 @@ struct EventList* create_list() {
   }
   list->head = NULL;
   list->tail = NULL;
+  list->event_num = 0;
   return list;
 }
 
@@ -31,6 +32,7 @@ int append_to_list(struct EventList* list, struct Event* event) {
     list->tail->next = new_node;
     list->tail = new_node;
   }
+  list->event_num++;
 
   return 0;
 }

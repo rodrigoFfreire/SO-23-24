@@ -9,7 +9,6 @@
 
 static struct EventList* event_list = NULL;
 static unsigned int state_access_delay_us = 0;
-static size_t num_events = 0;
 
 /// Gets the event with the given ID from the state.
 /// @note Will wait to simulate a real system accessing a costly memory resource.
@@ -111,7 +110,6 @@ int ems_create(unsigned int event_id, size_t num_rows, size_t num_cols) {
     return 1;
   }
 
-  num_events++;
   pthread_rwlock_unlock(&event_list->rwl);
   return 0;
 }
@@ -251,7 +249,7 @@ int ems_list_events(int out_fd) {
   struct ListNode* to = event_list->tail;
   struct ListNode* current = event_list->head;
 
-  if (safe_write(out_fd, &num_events, sizeof(size_t)) < 0) {
+  if (safe_write(out_fd, &event_list->event_num, sizeof(size_t)) < 0) {
     perror("Error writing to file descriptor");
     pthread_rwlock_unlock(&event_list->rwl);
     return 1;
@@ -284,6 +282,61 @@ int ems_list_events(int out_fd) {
       pthread_rwlock_unlock(&event_list->rwl);
       return 1;
     }
+
+    if (current == to) {
+      break;
+    }
+
+    current = current->next;
+  }
+
+  pthread_rwlock_unlock(&event_list->rwl);
+  return 0;
+}
+
+int ems_sigusr1_action(int out_fd) {
+  if (event_list == NULL) {
+    fprintf(stderr, "EMS state must be initialized\n");
+    return 1;
+  }
+
+  if (pthread_rwlock_rdlock(&event_list->rwl) != 0) {
+    fprintf(stderr, "Error locking list rwl\n");
+    return 1;
+  }
+
+  struct ListNode* to = event_list->tail;
+  struct ListNode* current = event_list->head;
+
+  if (current == NULL) {
+    char buff[] = "No events\n";
+    if (print_str(out_fd, buff)) {
+      perror("Error writing to file descriptor");
+      pthread_rwlock_unlock(&event_list->rwl);
+      return 1;
+    }
+
+    pthread_rwlock_unlock(&event_list->rwl);
+    return 0;
+  }
+
+  while (1) {
+    char buff[] = "Event: ";
+    if (print_str(out_fd, buff)) {
+      perror("Error writing to file descriptor");
+      pthread_rwlock_unlock(&event_list->rwl);
+      return 1;
+    }
+
+    char id[16];
+    sprintf(id, "%u\n", (current->event)->id);
+    if (print_str(out_fd, id)) {
+      perror("Error writing to file descriptor");
+      pthread_rwlock_unlock(&event_list->rwl);
+      return 1;
+    }
+
+    ems_show(out_fd, current->event->id);
 
     if (current == to) {
       break;

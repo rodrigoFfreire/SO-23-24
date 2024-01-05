@@ -188,12 +188,15 @@ int ems_show(int out_fd, unsigned int event_id) {
 
   pthread_rwlock_unlock(&event_list->rwl);
 
+  size_t event_size[2] = {0, 0};
   if (event == NULL) {
     fprintf(stderr, "Event not found\n");
+    if (safe_write(out_fd, &event_size, 2 * sizeof(size_t)) < 0) perror("Error writing to file descriptor");
     return 1;
   }
 
-  size_t event_size[2] = {event->rows, event->cols};
+  event_size[0] = event->rows; 
+  event_size[1] = event->cols;
   if (safe_write(out_fd, &event_size, 2 * sizeof(size_t)) < 0) {
     perror("Error writing to file descriptor");
     return 1;

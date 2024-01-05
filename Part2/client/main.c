@@ -17,6 +17,7 @@ int main(int argc, char* argv[]) {
 
   if (ems_setup(argv[1], argv[2], argv[3])) {
     fprintf(stderr, "Failed to set up EMS\n");
+    close_pipes();
     return 1;
   }
 

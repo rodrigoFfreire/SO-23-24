@@ -44,21 +44,28 @@ int read_requests(int req_fd, int resp_fd) {
       return JOB_FAILED;
     }
 
+    unsigned int event_id;
+    size_t num_matrix[2], xs[MAX_RESERVATION_SIZE], ys[MAX_RESERVATION_SIZE];
+    size_t num_seats;
+
     switch (op) {
     case OP_QUIT:
       break;
 
     case OP_CREATE:
-      char c_buf[CREATE_BUFSIZE];
-      if ((io_status = safe_read(req_fd, c_buf + sizeof(char), CREATE_BUFSIZE - 1)) <= 0) {
+      if ((io_status = safe_read(req_fd, &event_id, sizeof(int))) <= 0) {
         if (!io_status)
           return UNRESPONSIVE_CLIENT;
         return JOB_FAILED;
       }
 
-      response_status = ems_create(*(unsigned int*)(c_buf + sizeof(int)),
-                                *(size_t*)(c_buf + sizeof(size_t)), 
-                                *(size_t*)(c_buf + 2 * sizeof(size_t)));
+      if ((io_status = safe_read(req_fd, num_matrix, 2 * sizeof(size_t))) <= 0) {
+        if (!io_status)
+          return UNRESPONSIVE_CLIENT;
+        return JOB_FAILED;
+      }
+
+      response_status = ems_create(event_id, num_matrix[0], num_matrix[1]);
       
       if (safe_write(resp_fd, &response_status, sizeof(int)) < 0) {
         if (errno == EPIPE)
@@ -69,25 +76,31 @@ int read_requests(int req_fd, int resp_fd) {
       break;
 
     case OP_RESERVE:
-      char r_buf[RESERVE_BUFSIZE];
-      if ((io_status = safe_read(req_fd, r_buf + sizeof(char), 2 * sizeof(int) + sizeof(size_t) - 1)) <= 0) {
+      if ((io_status = safe_read(req_fd, &event_id, sizeof(int))) <= 0) {
         if (!io_status)
           return UNRESPONSIVE_CLIENT;
         return JOB_FAILED;
       }
 
-      size_t num_seats = *(size_t*)(r_buf + sizeof(size_t));
-
-      if ((io_status = safe_read(req_fd, r_buf + 2 * sizeof(size_t), 2 * num_seats * sizeof(size_t))) <= 0) {
+      if ((io_status = safe_read(req_fd, &num_seats, sizeof(size_t))) <= 0) {
         if (!io_status)
           return UNRESPONSIVE_CLIENT;
         return JOB_FAILED;
       }
 
-      response_status = ems_reserve(*(unsigned int*)(r_buf + sizeof(int)),
-                                num_seats,
-                                (size_t*)(r_buf + 2 * sizeof(size_t)),
-                                (size_t*)(r_buf + sizeof(size_t) * (num_seats + 2)));
+      if ((io_status = safe_read(req_fd, xs, sizeof(size_t) * MAX_RESERVATION_SIZE)) <= 0) {
+        if (!io_status)
+          return UNRESPONSIVE_CLIENT;
+        return JOB_FAILED;
+      }
+
+      if ((io_status = safe_read(req_fd, ys, sizeof(size_t) * MAX_RESERVATION_SIZE)) <= 0) {
+        if (!io_status)
+          return UNRESPONSIVE_CLIENT;
+        return JOB_FAILED;
+      }
+
+      response_status = ems_reserve(event_id, num_seats, xs, ys);
 
       if (safe_write(resp_fd, &response_status, sizeof(int)) < 0) {
         if (errno == EPIPE)
@@ -98,14 +111,13 @@ int read_requests(int req_fd, int resp_fd) {
       break;
 
     case OP_SHOW:
-      char s_buf[SHOW_BUFSIZE];
-      if ((io_status = safe_read(req_fd, s_buf + sizeof(char), SHOW_BUFSIZE - 1)) < 0) {
+      if ((io_status = safe_read(req_fd, &event_id, sizeof(int))) <= 0) {
         if (!io_status)
           return UNRESPONSIVE_CLIENT;
         return JOB_FAILED;
       }
 
-      response_status = ems_show(resp_fd, *(unsigned int*)(s_buf + sizeof(int)));
+      response_status = ems_show(resp_fd, event_id);
 
       if (safe_write(resp_fd, &response_status, sizeof(int)) < 0) {
         if (errno == EPIPE)

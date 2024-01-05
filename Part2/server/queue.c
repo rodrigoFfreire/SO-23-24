@@ -15,22 +15,13 @@ int init_queue(ConnectionQueue_t *queue) {
     return 1;
   }
 
-  if (pthread_rwlock_init(&queue->termination_lock, NULL) != 0) {
-    fprintf(stderr, "Failed to initialize termination lock");
-    pthread_mutex_destroy(&queue->queue_lock);
-    return 1;
-  }
-
   if (pthread_cond_init(&queue->available_connection, NULL) != 0) {
     fprintf(stderr, "Failed to initialize condition variable");
     pthread_mutex_destroy(&queue->queue_lock);
-    pthread_rwlock_destroy(&queue->termination_lock);
     return 1;
   }
 
   queue->front = queue->rear = NULL;
-  queue->terminate = 0;
-
   return 0;
 }
 
@@ -43,13 +34,11 @@ void free_queue(ConnectionQueue_t *queue) {
   while (curr_node != NULL) {
     next_node = curr_node->next;
     free(curr_node);
-    fprintf(stderr, "\x1b[1;91m[SERVER]: Rejected Connection [Closing Server]\n");
     curr_node = next_node;
   }
   queue->front = queue->rear = NULL;
 
   pthread_mutex_destroy(&queue->queue_lock);
-  pthread_rwlock_destroy(&queue->termination_lock);
   pthread_cond_destroy(&queue->available_connection);
 }
 

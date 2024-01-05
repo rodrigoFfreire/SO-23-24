@@ -14,22 +14,18 @@
 #include "queue.h"
 #include "sessions.h"
 
-volatile sig_atomic_t terminate = 0;
 volatile sig_atomic_t usr1_sig = 0;
 
 void sig_handler(int sig) {
-  if (sig == SIGINT)
-    terminate = 1;
-
-  else if (sig == SIGUSR1)
+  if (sig == SIGUSR1)
     usr1_sig = 1;
 }
 
 int main(int argc, char* argv[]) {
+  // Sigaction is used instead of signal(). According to the man page it should be prefered over signal()
   struct sigaction sa;
   sa.sa_handler = &sig_handler;
   sa.sa_flags = 0;
-  sigaction(SIGINT, &sa, NULL);
   sigaction(SIGUSR1, &sa, NULL);
 
   if (argc < 2 || argc > 3) {
@@ -100,18 +96,15 @@ int main(int argc, char* argv[]) {
 
   ssize_t read_status = 0;
   while (1) {
-    if (terminate) break;
-
     char setup_buffer[SETUP_REQUEST_BUFSIZ] = {0};
     if ((read_status = safe_read(register_pipe, setup_buffer, SETUP_REQUEST_BUFSIZ)) < 0) {
       if (errno == EINTR && usr1_sig) {
         if (ems_sigusr1_action()) fprintf(stderr, "Failed executing USR1 action\n");
         usr1_sig = 0;
-      } else if (errno == EINTR && terminate) {
-        break;
-      } else {
-        fprintf(stderr, "Failed reading from register pipe\n");
       }
+      else
+        fprintf(stderr, "Failed reading from register pipe\n");
+
       continue;
     }
 
@@ -122,22 +115,9 @@ int main(int argc, char* argv[]) {
       continue;
     }
   }
-
-  pthread_rwlock_wrlock(&connect_queue.termination_lock);
-  connect_queue.terminate = 1;
-  pthread_rwlock_unlock(&connect_queue.termination_lock);
-  pthread_cond_broadcast(&connect_queue.available_connection);
-
-  for (unsigned int i = 0; i < MAX_SESSION_COUNT; i++) {
-    pthread_join(worker_threads[i], NULL);
-    fprintf(stdout, "\x1b[1;94m[WORKER %.2u]: Terminated!\x1b[0m\n", i);
-  }
-
-  close(register_pipe);
-  unlink(reg_pipe_path);
-  free_queue(&connect_queue);
+  /* Thread joining, closing the register pipe, freeing the queue has been ommited since its not required
+   to close the server
+  */
   ems_terminate();
-  fprintf(stdout, "\x1b[1;95m[SERVER]: Terminated!\x1b[0m\n");
-
   return 0;
 }

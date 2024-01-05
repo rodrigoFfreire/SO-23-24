@@ -12,15 +12,6 @@
 #include "operations.h"
 #include "queue.h"
 
-int check_termination(ConnectionQueue_t *queue) {
-  pthread_rwlock_rdlock(&queue->termination_lock);
-  if (queue->terminate) {
-    pthread_rwlock_unlock(&queue->termination_lock);
-    return 1;
-  }
-  pthread_rwlock_unlock(&queue->termination_lock);
-  return 0;
-}
 
 /// Listens for the client's requests, executes the appropriate commands and responds back
 /// @param req_fd File descriptor of the request pipe
@@ -148,17 +139,9 @@ void *connect_clients(void *args) {
   char resp_pipe_path[MAX_PIPE_NAME_SIZE];
 
   while (1) {
-    if (check_termination(queue)) break;
-
     pthread_mutex_lock(&queue->queue_lock);
-    while (isEmpty(queue)) {
+    while (isEmpty(queue))
       pthread_cond_wait(&queue->available_connection, &queue->queue_lock);
-
-      if (check_termination(queue)) {
-        pthread_mutex_unlock(&queue->queue_lock);
-        return NULL;
-      }
-    }
 
     Connection_t *connection = dequeue_connection(queue);
     pthread_mutex_unlock(&queue->queue_lock);
@@ -171,8 +154,6 @@ void *connect_clients(void *args) {
     memcpy(req_pipe_path, connection->req_pipe_path, MAX_PIPE_NAME_SIZE);
     memcpy(resp_pipe_path, connection->resp_pipe_path, MAX_PIPE_NAME_SIZE);
     free(connection);
-
-    fprintf(stdout, "\x1b[1;94m[WORKER %.2u] Connected to Client!\x1b[0m\n", session_id);
 
     int resp_pipe = open(resp_pipe_path, O_WRONLY);
     if (resp_pipe < 0) {
@@ -198,7 +179,7 @@ void *connect_clients(void *args) {
       if (job_status == CLIENT_FAILED)
         fprintf(stderr, "Failed communicating with client\n");
       else if (job_status == CLIENT_UNRESPONSIVE)
-        fprintf(stderr, "\x1b[1;91m[WORKER %.2u] Client is unresponsive. Terminating Session...\x1b[0m\n", session_id);
+        fprintf(stderr, "Client is unresponsive. Terminating Session...\n", session_id);
 
       close(resp_pipe);
       close(req_pipe);
@@ -207,7 +188,6 @@ void *connect_clients(void *args) {
 
     close(req_pipe);
     close(resp_pipe);
-    fprintf(stdout, "\x1b[1;94m[WORKER %.2u] Job successfully completed. Terminating Session...\x1b[0m\n", session_id);
   }
 
   return NULL;

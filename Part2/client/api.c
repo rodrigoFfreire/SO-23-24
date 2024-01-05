@@ -22,11 +22,11 @@ int ems_setup(char const* req_pipe_path, char const* resp_pipe_path, char const*
   strncpy(pipes.req_pipe, req_pipe_path, MAX_PIPE_NAME_SIZE);
   strncpy(pipes.resp_pipe, resp_pipe_path, MAX_PIPE_NAME_SIZE);
 
-  if (mkfifo(req_pipe_path, 0640)) {
+  if (mkfifo(req_pipe_path, 0666)) {
     perror("Could not create response pipe");
     return 1;
   }
-  if (mkfifo(resp_pipe_path, 0640)) {
+  if (mkfifo(resp_pipe_path, 0666)) {
     perror("Could not create request pipe");
     return 1;
   }

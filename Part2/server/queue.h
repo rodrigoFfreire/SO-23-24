@@ -13,8 +13,6 @@ typedef struct Connection {
 
 typedef struct ConnectionQueue {
   Connection_t *front, *rear;
-  char terminate;
-  pthread_rwlock_t termination_lock;
   pthread_mutex_t queue_lock;
   pthread_cond_t available_connection;
 } ConnectionQueue_t;

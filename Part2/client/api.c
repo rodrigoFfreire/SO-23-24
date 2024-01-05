@@ -9,10 +9,7 @@
 #include "common/io.h"
 #include "common/constants.h"
 
-int request_fd;
-int response_fd;
-char req_fd_path[MAX_PIPE_NAME_SIZE];
-char resp_fd_path[MAX_PIPE_NAME_SIZE];
+static ConnectionPipes_t pipes;
 
 int ems_setup(char const* req_pipe_path, char const* resp_pipe_path, char const* server_pipe_path) {
   char request_buff[SETUP_REQUEST_BUFSIZ] = {0};
@@ -22,8 +19,8 @@ int ems_setup(char const* req_pipe_path, char const* resp_pipe_path, char const*
   strcpy(request_buff + sizeof(char), req_pipe_path);
   strcpy(request_buff + sizeof(char) * (MAX_PIPE_NAME_SIZE + 1), resp_pipe_path);
 
-  strcpy(req_fd_path, req_pipe_path);
-  strcpy(resp_fd_path, resp_pipe_path);
+  strcpy(pipes.req_pipe, req_pipe_path);
+  strcpy(pipes.resp_pipe, resp_pipe_path);
 
   if (mkfifo(req_pipe_path, 0640)) {
     perror("Could not create response pipe");
@@ -53,7 +50,7 @@ int ems_setup(char const* req_pipe_path, char const* resp_pipe_path, char const*
     perror("Could not open response pipe");
     return 1;
   }
-  response_fd = resp_pipe;
+  pipes.resp_fd = resp_pipe;
 
   if (safe_read(resp_pipe, &session_id, sizeof(int)) < 0) {
     perror("Could not get the session ID");
@@ -68,25 +65,35 @@ int ems_setup(char const* req_pipe_path, char const* resp_pipe_path, char const*
     close(resp_pipe);
     return 1;
   }
-  request_fd = req_pipe;
+  pipes.req_fd = req_pipe;
 
   return 0;
+}
+
+int close_pipes(void) {
+  close(pipes.req_fd);
+  close(pipes.resp_fd);
+
+  if (unlink(pipes.req_pipe) < 0) {
+    perror("Failed to unlink request pipe");
+    return 1;
+  }
+
+  if (unlink(pipes.resp_pipe) < 0) {
+    perror("Failed to unlink response pipe");
+    return 1;
+  }
 }
 
 int ems_quit(void) { 
   char op = (char)OP_QUIT;
 
-  if (safe_write(request_fd, &op, sizeof(char)) < 0) {
+  if (safe_write(pipes.req_fd, &op, sizeof(char)) < 0) {
     perror("Could not send quit request");
     return 1;
   }
 
-  close(request_fd);
-  close(response_fd);
-
-  unlink(req_fd_path);
-  unlink(resp_fd_path);
-
+  close_pipes();
   return 0;
 }
 
@@ -95,20 +102,20 @@ int ems_create(unsigned int event_id, size_t num_rows, size_t num_cols) {
   int return_value = 1;
   size_t num_matrix[] = {num_rows, num_cols};
   
-  if (safe_write(request_fd, &op, sizeof(char)) < 0) {
+  if (safe_write(pipes.req_fd, &op, sizeof(char)) < 0) {
     perror("Could not send operation code");
     return 1;
   }
-  if (safe_write(request_fd, &event_id, sizeof(int)) < 0) {
+  if (safe_write(pipes.req_fd, &event_id, sizeof(int)) < 0) {
     perror("Could not send creation information");
     return 1;
   }
-  if (safe_write(request_fd, num_matrix, 2 * sizeof(size_t)) < 0) {
+  if (safe_write(pipes.req_fd, num_matrix, 2 * sizeof(size_t)) < 0) {
     perror("Could not send creation information");
     return 1;
   }
 
-  if (safe_read(response_fd, &return_value, sizeof(int)) <= 0) {
+  if (safe_read(pipes.resp_fd, &return_value, sizeof(int)) <= 0) {
     perror("Could not read return value of operation");
     return 1;
   }
@@ -120,28 +127,28 @@ int ems_reserve(unsigned int event_id, size_t num_seats, size_t* xs, size_t* ys)
   char op = (char)OP_RESERVE;
   int return_value = 1;
 
-  if (safe_write(request_fd, &op, sizeof(char)) < 0) {
+  if (safe_write(pipes.req_fd, &op, sizeof(char)) < 0) {
     perror("Could not send operation code");
     return 1;
   }
-  if (safe_write(request_fd, &event_id, sizeof(int)) < 0) {
+  if (safe_write(pipes.req_fd, &event_id, sizeof(int)) < 0) {
     perror("Could not send reservation information");
     return 1;
   }
-  if (safe_write(request_fd, &num_seats, sizeof(size_t)) < 0) {
+  if (safe_write(pipes.req_fd, &num_seats, sizeof(size_t)) < 0) {
     perror("Could not send reservation information");
     return 1;
   }
-  if (safe_write(request_fd, xs, sizeof(size_t) * MAX_RESERVATION_SIZE) < 0) {
+  if (safe_write(pipes.req_fd, xs, sizeof(size_t) * MAX_RESERVATION_SIZE) < 0) {
     perror("Could not send reservation information");
     return 1;
   }
-  if (safe_write(request_fd, ys, sizeof(size_t) * MAX_RESERVATION_SIZE) < 0) {
+  if (safe_write(pipes.req_fd, ys, sizeof(size_t) * MAX_RESERVATION_SIZE) < 0) {
     perror("Could not send reservation information");
     return 1;
   }
 
-  if (safe_read(response_fd, &return_value, sizeof(int)) <= 0) {
+  if (safe_read(pipes.resp_fd, &return_value, sizeof(int)) <= 0) {
     perror("Could not read return value of operation");
     return 1;
   }
@@ -154,16 +161,16 @@ int ems_show(int out_fd, unsigned int event_id) {
   int return_value = 1;
   size_t num_matrix[2]; // Contains num_rows, num_cols
   
-  if (safe_write(request_fd, &op, sizeof(char)) < 0) {
+  if (safe_write(pipes.req_fd, &op, sizeof(char)) < 0) {
     perror("Could not send operation code");
     return 1;
   }
-  if (safe_write(request_fd, &event_id, sizeof(int)) < 0) {
+  if (safe_write(pipes.req_fd, &event_id, sizeof(int)) < 0) {
     perror("Could not send show operation information");
     return 1;
   }
 
-  if (safe_read(response_fd, &num_matrix, 2 * sizeof(size_t)) <= 0) {
+  if (safe_read(pipes.resp_fd, &num_matrix, 2 * sizeof(size_t)) <= 0) {
     perror("Could not get show operation information");
     return 1;
   }
@@ -174,7 +181,7 @@ int ems_show(int out_fd, unsigned int event_id) {
     fprintf(stderr, "Could not allocate memory for seats.\n");
     return 1;
   }
-  if (safe_read(response_fd, seats, sizeof(int) * num_seats) < 0) {
+  if (safe_read(pipes.resp_fd, seats, sizeof(int) * num_seats) < 0) {
     perror("Could not get seats");
     free(seats);
     return 1;
@@ -208,7 +215,7 @@ int ems_show(int out_fd, unsigned int event_id) {
   }
   free(seats);
 
-  if (safe_read(response_fd, &return_value, sizeof(int)) <= 0) {
+  if (safe_read(pipes.resp_fd, &return_value, sizeof(int)) <= 0) {
     perror("Could not read return value of operation");
     return 1;
   }
@@ -221,12 +228,12 @@ int ems_list_events(int out_fd) {
   int return_value = 1;
   size_t num_seats = 0;
 
-  if (safe_write(request_fd, &op, sizeof(char)) < 0) {
+  if (safe_write(pipes.req_fd, &op, sizeof(char)) < 0) {
     perror("Could not send operation code");
     return 1;
   }
 
-  if (safe_read(response_fd, &num_seats, sizeof(size_t)) < 0) {
+  if (safe_read(pipes.resp_fd, &num_seats, sizeof(size_t)) < 0) {
     perror("Could not get list operation information");
     return 1;
   }
@@ -236,7 +243,7 @@ int ems_list_events(int out_fd) {
     fprintf(stderr, "Could not allocate memory for event ids.\n");
     return 1;
   }
-  if (safe_read(response_fd, ids, sizeof(int) * num_seats) < 0) {
+  if (safe_read(pipes.resp_fd, ids, sizeof(int) * num_seats) < 0) {
     perror("Could not read list operation information");
     free(ids);
     return 1;
@@ -268,7 +275,7 @@ int ems_list_events(int out_fd) {
   }
   free(ids);
 
-  if (safe_read(response_fd, &return_value, sizeof(int)) <= 0) {
+  if (safe_read(pipes.resp_fd, &return_value, sizeof(int)) <= 0) {
     perror("Could not read return value of operation");
     return 1;
   }

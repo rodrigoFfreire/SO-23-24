@@ -7,6 +7,8 @@
 typedef struct ConnectionPipes {
     const char* req_pipe[MAX_PIPE_NAME_SIZE];
     const char* resp_pipe[MAX_PIPE_NAME_SIZE];
+    int req_fd;
+    int resp_fd;
 } ConnectionPipes_t;
 
 /// Connects to an EMS server.
@@ -15,6 +17,10 @@ typedef struct ConnectionPipes {
 /// @param server_pipe_path Path to the name pipe where the server is listening.
 /// @return 0 if the connection was established successfully, 1 otherwise.
 int ems_setup(char const* req_pipe_path, char const* resp_pipe_path, char const* server_pipe_path);
+
+/// Auxiliary function for closing and unlinking the created named pipes.
+/// @return 0 if successful, 1 otherwise.
+int close_pipes(void);
 
 /// Disconnects from an EMS server.
 /// @return 0 in case of success, 1 otherwise.

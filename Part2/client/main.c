@@ -23,6 +23,7 @@ int main(int argc, char* argv[]) {
   if (dot == NULL || dot == argv[4] || strlen(dot) != 5 || strcmp(dot, ".jobs") ||
       strlen(argv[4]) > MAX_JOB_FILE_NAME_SIZE) {
     fprintf(stderr, "The provided .jobs file path is not valid. Path: %s\n", argv[1]);
+    close_pipes();
     return 1;
   }
 
@@ -33,19 +34,22 @@ int main(int argc, char* argv[]) {
   int in_fd = open(argv[4], O_RDONLY);
   if (in_fd == -1) {
     fprintf(stderr, "Failed to open input file. Path: %s\n", argv[4]);
+    close_pipes();
     return 1;
   }
 
   int out_fd = open(out_path, O_WRONLY | O_CREAT | O_TRUNC, 0666);
   if (out_fd == -1) {
     fprintf(stderr, "Failed to open output file. Path: %s\n", out_path);
+    close_pipes();
+    close(in_fd);
     return 1;
   }
 
   while (1) {
     unsigned int event_id;
-    size_t num_rows, num_columns, num_coords;
     unsigned int delay = 0;
+    size_t num_rows, num_columns, num_coords;
     size_t xs[MAX_RESERVATION_SIZE], ys[MAX_RESERVATION_SIZE];
     int return_value;
 

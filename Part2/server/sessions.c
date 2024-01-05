@@ -1,23 +1,23 @@
+#include "sessions.h"
+
+#include <errno.h>
+#include <fcntl.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <string.h>
-#include <errno.h>
-#include <signal.h>
+#include <unistd.h>
 
-#include "queue.h"
-#include "sessions.h"
 #include "common/io.h"
 #include "operations.h"
-
+#include "queue.h"
 
 int check_termination(ConnectionQueue_t *queue) {
   pthread_rwlock_rdlock(&queue->termination_lock);
-    if (queue->terminate) {
-      pthread_rwlock_unlock(&queue->termination_lock);
-      return 1;
-    }
+  if (queue->terminate) {
+    pthread_rwlock_unlock(&queue->termination_lock);
+    return 1;
+  }
   pthread_rwlock_unlock(&queue->termination_lock);
   return 0;
 }
@@ -32,7 +32,7 @@ int handle_requests(int req_fd, int resp_fd) {
   sigemptyset(&mask);
   sigaddset(&mask, SIGPIPE);
   sigaddset(&mask, SIGUSR1);
-  
+
   if (pthread_sigmask(SIG_BLOCK, &mask, NULL)) {
     fprintf(stderr, "Failed creating signal mask\n");
     return CLIENT_FAILED;
@@ -44,8 +44,7 @@ int handle_requests(int req_fd, int resp_fd) {
 
   while (op != OP_QUIT) {
     if ((io_status = safe_read(req_fd, &op, sizeof(char))) <= 0) {
-      if (!io_status)
-        return CLIENT_UNRESPONSIVE;
+      if (!io_status) return CLIENT_UNRESPONSIVE;
       return CLIENT_FAILED;
     }
 
@@ -54,105 +53,94 @@ int handle_requests(int req_fd, int resp_fd) {
     size_t num_seats;
 
     switch (op) {
-    case OP_QUIT:
-      break;
+      case OP_QUIT:
+        break;
 
-    case OP_CREATE:
-      if ((io_status = safe_read(req_fd, &event_id, sizeof(int))) <= 0) {
-        if (!io_status)
-          return CLIENT_UNRESPONSIVE;
-        return CLIENT_FAILED;
-      }
+      case OP_CREATE:
+        if ((io_status = safe_read(req_fd, &event_id, sizeof(int))) <= 0) {
+          if (!io_status) return CLIENT_UNRESPONSIVE;
+          return CLIENT_FAILED;
+        }
 
-      if ((io_status = safe_read(req_fd, num_matrix, 2 * sizeof(size_t))) <= 0) {
-        if (!io_status)
-          return CLIENT_UNRESPONSIVE;
-        return CLIENT_FAILED;
-      }
+        if ((io_status = safe_read(req_fd, num_matrix, 2 * sizeof(size_t))) <= 0) {
+          if (!io_status) return CLIENT_UNRESPONSIVE;
+          return CLIENT_FAILED;
+        }
 
-      response_status = ems_create(event_id, num_matrix[0], num_matrix[1]);
-      
-      if (safe_write(resp_fd, &response_status, sizeof(int)) < 0) {
-        if (errno == EPIPE)
-          return CLIENT_UNRESPONSIVE;
-        return CLIENT_FAILED;
-      }
-      
-      break;
+        response_status = ems_create(event_id, num_matrix[0], num_matrix[1]);
 
-    case OP_RESERVE:
-      if ((io_status = safe_read(req_fd, &event_id, sizeof(int))) <= 0) {
-        if (!io_status)
-          return CLIENT_UNRESPONSIVE;
-        return CLIENT_FAILED;
-      }
+        if (safe_write(resp_fd, &response_status, sizeof(int)) < 0) {
+          if (errno == EPIPE) return CLIENT_UNRESPONSIVE;
+          return CLIENT_FAILED;
+        }
 
-      if ((io_status = safe_read(req_fd, &num_seats, sizeof(size_t))) <= 0) {
-        if (!io_status)
-          return CLIENT_UNRESPONSIVE;
-        return CLIENT_FAILED;
-      }
+        break;
 
-      if ((io_status = safe_read(req_fd, xs, sizeof(size_t) * MAX_RESERVATION_SIZE)) <= 0) {
-        if (!io_status)
-          return CLIENT_UNRESPONSIVE;
-        return CLIENT_FAILED;
-      }
+      case OP_RESERVE:
+        if ((io_status = safe_read(req_fd, &event_id, sizeof(int))) <= 0) {
+          if (!io_status) return CLIENT_UNRESPONSIVE;
+          return CLIENT_FAILED;
+        }
 
-      if ((io_status = safe_read(req_fd, ys, sizeof(size_t) * MAX_RESERVATION_SIZE)) <= 0) {
-        if (!io_status)
-          return CLIENT_UNRESPONSIVE;
-        return CLIENT_FAILED;
-      }
+        if ((io_status = safe_read(req_fd, &num_seats, sizeof(size_t))) <= 0) {
+          if (!io_status) return CLIENT_UNRESPONSIVE;
+          return CLIENT_FAILED;
+        }
 
-      response_status = ems_reserve(event_id, num_seats, xs, ys);
+        if ((io_status = safe_read(req_fd, xs, sizeof(size_t) * MAX_RESERVATION_SIZE)) <= 0) {
+          if (!io_status) return CLIENT_UNRESPONSIVE;
+          return CLIENT_FAILED;
+        }
 
-      if (safe_write(resp_fd, &response_status, sizeof(int)) < 0) {
-        if (errno == EPIPE)
-          return CLIENT_UNRESPONSIVE;
-        return CLIENT_FAILED;
-      }
+        if ((io_status = safe_read(req_fd, ys, sizeof(size_t) * MAX_RESERVATION_SIZE)) <= 0) {
+          if (!io_status) return CLIENT_UNRESPONSIVE;
+          return CLIENT_FAILED;
+        }
 
-      break;
+        response_status = ems_reserve(event_id, num_seats, xs, ys);
 
-    case OP_SHOW:
-      if ((io_status = safe_read(req_fd, &event_id, sizeof(int))) <= 0) {
-        if (!io_status)
-          return CLIENT_UNRESPONSIVE;
-        return CLIENT_FAILED;
-      }
+        if (safe_write(resp_fd, &response_status, sizeof(int)) < 0) {
+          if (errno == EPIPE) return CLIENT_UNRESPONSIVE;
+          return CLIENT_FAILED;
+        }
 
-      response_status = ems_show(resp_fd, event_id);
+        break;
 
-      if (safe_write(resp_fd, &response_status, sizeof(int)) < 0) {
-        if (errno == EPIPE)
-          return CLIENT_UNRESPONSIVE;
-        return CLIENT_FAILED;
-      }
+      case OP_SHOW:
+        if ((io_status = safe_read(req_fd, &event_id, sizeof(int))) <= 0) {
+          if (!io_status) return CLIENT_UNRESPONSIVE;
+          return CLIENT_FAILED;
+        }
 
-      break;
+        response_status = ems_show(resp_fd, event_id);
 
-    case OP_LIST:
-      response_status = ems_list_events(resp_fd);
+        if (safe_write(resp_fd, &response_status, sizeof(int)) < 0) {
+          if (errno == EPIPE) return CLIENT_UNRESPONSIVE;
+          return CLIENT_FAILED;
+        }
 
-      if (safe_write(resp_fd, &response_status, sizeof(int)) < 0) {
-        if (errno == EPIPE)
-          return CLIENT_UNRESPONSIVE;
-        return CLIENT_FAILED;
-      }
+        break;
 
-      break;
-    
-    default:
-      break;
+      case OP_LIST:
+        response_status = ems_list_events(resp_fd);
+
+        if (safe_write(resp_fd, &response_status, sizeof(int)) < 0) {
+          if (errno == EPIPE) return CLIENT_UNRESPONSIVE;
+          return CLIENT_FAILED;
+        }
+
+        break;
+
+      default:
+        break;
     }
   }
-  
+
   return CLIENT_SUCCESS;
 }
 
 void *connect_clients(void *args) {
-  Session_t *session_info = (Session_t*)args;
+  Session_t *session_info = (Session_t *)args;
   unsigned int session_id = session_info->session_id;
   ConnectionQueue_t *queue = session_info->queue;
 
@@ -160,13 +148,12 @@ void *connect_clients(void *args) {
   char resp_pipe_path[MAX_PIPE_NAME_SIZE];
 
   while (1) {
-    if (check_termination(queue))
-      break;
+    if (check_termination(queue)) break;
 
     pthread_mutex_lock(&queue->queue_lock);
     while (isEmpty(queue)) {
       pthread_cond_wait(&queue->available_connection, &queue->queue_lock);
-      
+
       if (check_termination(queue)) {
         pthread_mutex_unlock(&queue->queue_lock);
         return NULL;

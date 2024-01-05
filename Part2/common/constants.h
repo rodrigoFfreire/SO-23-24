@@ -8,14 +8,6 @@
 #define MAX_PIPE_NAME_SIZE 40
 #define SETUP_REQUEST_BUFSIZ 82
 
-enum OpCodes {
-    OP_NONE,
-    OP_SETUP,
-    OP_QUIT,
-    OP_CREATE,
-    OP_RESERVE,
-    OP_SHOW,
-    OP_LIST
-};
+enum OpCodes { OP_NONE, OP_SETUP, OP_QUIT, OP_CREATE, OP_RESERVE, OP_SHOW, OP_LIST };
 
 #endif

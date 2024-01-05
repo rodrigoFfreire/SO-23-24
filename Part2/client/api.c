@@ -1,13 +1,13 @@
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
-#include "api.h"
-#include "common/io.h"
 #include "common/constants.h"
+#include "common/io.h"
+#include "api.h"
 
 static ConnectionPipes_t pipes;
 
@@ -85,7 +85,7 @@ int close_pipes(void) {
   }
 }
 
-int ems_quit(void) { 
+int ems_quit(void) {
   char op = (char)OP_QUIT;
 
   if (safe_write(pipes.req_fd, &op, sizeof(char)) < 0) {
@@ -101,7 +101,7 @@ int ems_create(unsigned int event_id, size_t num_rows, size_t num_cols) {
   char op = (char)OP_CREATE;
   int return_value = 1;
   size_t num_matrix[] = {num_rows, num_cols};
-  
+
   if (safe_write(pipes.req_fd, &op, sizeof(char)) < 0) {
     perror("Could not send operation code");
     return 1;
@@ -159,8 +159,8 @@ int ems_reserve(unsigned int event_id, size_t num_seats, size_t* xs, size_t* ys)
 int ems_show(int out_fd, unsigned int event_id) {
   char op = (char)OP_SHOW;
   int return_value = 1;
-  size_t num_matrix[2]; // Contains num_rows, num_cols
-  
+  size_t num_matrix[2];  // Contains num_rows, num_cols
+
   if (safe_write(pipes.req_fd, &op, sizeof(char)) < 0) {
     perror("Could not send operation code");
     return 1;
@@ -174,9 +174,9 @@ int ems_show(int out_fd, unsigned int event_id) {
     perror("Could not get show operation information");
     return 1;
   }
-  
+
   size_t num_seats = num_matrix[0] * num_matrix[1];
-  unsigned int *seats = (unsigned int*) malloc(sizeof(int) * num_seats);
+  unsigned int* seats = (unsigned int*)malloc(sizeof(int) * num_seats);
   if (seats == NULL) {
     fprintf(stderr, "Could not allocate memory for seats.\n");
     return 1;
@@ -237,8 +237,8 @@ int ems_list_events(int out_fd) {
     perror("Could not get list operation information");
     return 1;
   }
-  
-  unsigned int *ids = (unsigned int*) malloc(sizeof(int) * num_seats);
+
+  unsigned int* ids = (unsigned int*)malloc(sizeof(int) * num_seats);
   if (ids == NULL) {
     fprintf(stderr, "Could not allocate memory for event ids.\n");
     return 1;

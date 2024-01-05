@@ -1,11 +1,12 @@
+#include "queue.h"
+
+#include <fcntl.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
 #include <string.h>
 #include <unistd.h>
-#include <fcntl.h>
 
-#include "queue.h"
 #include "common/constants.h"
 
 int init_queue(ConnectionQueue_t *queue) {
@@ -13,7 +14,7 @@ int init_queue(ConnectionQueue_t *queue) {
     fprintf(stderr, "Failed to initialize queue lock");
     return 1;
   }
-  
+
   if (pthread_rwlock_init(&queue->termination_lock, NULL) != 0) {
     fprintf(stderr, "Failed to initialize termination lock");
     pthread_mutex_destroy(&queue->queue_lock);
@@ -33,9 +34,7 @@ int init_queue(ConnectionQueue_t *queue) {
   return 0;
 }
 
-int isEmpty(ConnectionQueue_t *queue) {
-  return (queue->front == NULL);
-}
+int isEmpty(ConnectionQueue_t *queue) { return (queue->front == NULL); }
 
 void free_queue(ConnectionQueue_t *queue) {
   Connection_t *curr_node = queue->front;
@@ -54,8 +53,8 @@ void free_queue(ConnectionQueue_t *queue) {
   pthread_cond_destroy(&queue->available_connection);
 }
 
-int enqueue_connection(ConnectionQueue_t *queue, const char* setup_buffer) {
-  Connection_t *new_connection = (Connection_t*) malloc(sizeof(Connection_t));
+int enqueue_connection(ConnectionQueue_t *queue, const char *setup_buffer) {
+  Connection_t *new_connection = (Connection_t *)malloc(sizeof(Connection_t));
   if (new_connection == NULL) {
     fprintf(stderr, "Failed to allocate memory\n");
     return 1;

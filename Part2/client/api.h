@@ -1,14 +1,14 @@
 #ifndef CLIENT_API_H
 #define CLIENT_API_H
 
-#include <stddef.h>
 #include <common/constants.h>
+#include <stddef.h>
 
 typedef struct ConnectionPipes {
-    const char* req_pipe[MAX_PIPE_NAME_SIZE];
-    const char* resp_pipe[MAX_PIPE_NAME_SIZE];
-    int req_fd;
-    int resp_fd;
+  const char* req_pipe[MAX_PIPE_NAME_SIZE];
+  const char* resp_pipe[MAX_PIPE_NAME_SIZE];
+  int req_fd;
+  int resp_fd;
 } ConnectionPipes_t;
 
 /// Connects to an EMS server.

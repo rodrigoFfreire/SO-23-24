@@ -89,7 +89,7 @@ ssize_t safe_read(int fd, void *buf, size_t nbytes) {
     else if (rd_bytes == 0)
       break;
 
-    nbytes -= (size_t) rd_bytes;
+    nbytes -= (size_t)rd_bytes;
     completed_bytes += rd_bytes;
   }
 
@@ -107,9 +107,9 @@ ssize_t safe_write(int fd, const void *buf, size_t nbytes) {
     else if (wr_bytes == 0)
       break;
 
-    nbytes -= (size_t) wr_bytes;
+    nbytes -= (size_t)wr_bytes;
     completed_bytes += wr_bytes;
   }
-  
+
   return completed_bytes;
 }

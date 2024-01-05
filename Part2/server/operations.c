@@ -239,8 +239,7 @@ int ems_list_events(int out_fd) {
       return 1;
     }
 
-    if (current == to)
-      break;
+    if (current == to) break;
 
     current = current->next;
   }
@@ -262,7 +261,7 @@ int ems_sigusr1_action() {
 
   struct ListNode* to = event_list->tail;
   struct ListNode* current = event_list->head;
-  struct Event *curr_event;
+  struct Event* curr_event;
 
   if (current == NULL) {
     printf("No events\n");
@@ -284,16 +283,14 @@ int ems_sigusr1_action() {
       for (size_t j = 1; j <= curr_event->cols; j++) {
         printf("%u", curr_event->data[seat_index(curr_event, i, j)]);
 
-        if (j < curr_event->cols)
-          printf(" ");
+        if (j < curr_event->cols) printf(" ");
       }
       printf("\n");
     }
     pthread_mutex_unlock(&curr_event->mutex);
 
-    if (current == to)
-      break;
-      
+    if (current == to) break;
+
     current = current->next;
   }
 

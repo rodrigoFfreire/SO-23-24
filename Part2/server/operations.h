@@ -38,7 +38,7 @@ int ems_show(int out_fd, unsigned int event_id);
 int ems_list_events(int out_fd);
 
 /// Prints the status of each seat for every event to stdout
-/// @return 0 if the information was printed successfully, 1 otherwise. 
+/// @return 0 if the information was printed successfully, 1 otherwise.
 int ems_sigusr1_action();
 
 #endif  // SERVER_OPERATIONS_H

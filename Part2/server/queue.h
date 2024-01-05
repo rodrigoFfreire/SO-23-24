@@ -2,20 +2,21 @@
 #define QUEUE_H
 
 #include <pthread.h>
+
 #include "common/constants.h"
 
 typedef struct Connection {
-    char req_pipe_path[MAX_PIPE_NAME_SIZE];
-    char resp_pipe_path[MAX_PIPE_NAME_SIZE];
-    struct Connection* next; 
+  char req_pipe_path[MAX_PIPE_NAME_SIZE];
+  char resp_pipe_path[MAX_PIPE_NAME_SIZE];
+  struct Connection *next;
 } Connection_t;
 
 typedef struct ConnectionQueue {
-    Connection_t *front, *rear;
-    char terminate;
-    pthread_rwlock_t termination_lock;
-    pthread_mutex_t queue_lock;
-    pthread_cond_t available_connection;
+  Connection_t *front, *rear;
+  char terminate;
+  pthread_rwlock_t termination_lock;
+  pthread_mutex_t queue_lock;
+  pthread_cond_t available_connection;
 } ConnectionQueue_t;
 
 /// Initializes the connection queue.
@@ -36,7 +37,7 @@ void free_queue(ConnectionQueue_t *queue);
 /// @param queue Pointer to the connection queue.
 /// @param setup_buffer Buffer that contains the paths of the client's named pipes
 /// @return 0 if successfull, 1 otherwise.
-int enqueue_connection(ConnectionQueue_t *queue, const char* setup_buffer);
+int enqueue_connection(ConnectionQueue_t *queue, const char *setup_buffer);
 
 /// Dequeues a connection request.
 /// @param queue Pointer to the connection queue.

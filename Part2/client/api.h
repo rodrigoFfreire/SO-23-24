@@ -2,6 +2,12 @@
 #define CLIENT_API_H
 
 #include <stddef.h>
+#include <common/constants.h>
+
+typedef struct ConnectionPipes {
+    const char* req_pipe[MAX_PIPE_NAME_SIZE];
+    const char* resp_pipe[MAX_PIPE_NAME_SIZE];
+} ConnectionPipes_t;
 
 /// Connects to an EMS server.
 /// @param req_pipe_path Path to the name pipe to be created for requests.

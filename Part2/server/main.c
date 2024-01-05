@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
   char reg_pipe_path[MAX_PIPE_NAME_SIZE] = {0};
   strcpy(reg_pipe_path, argv[1]);
   if (mkfifo(reg_pipe_path, 0640) < 0) {
-    fprintf(stderr, "Failed to create register pipe\n");
+    perror("Failed to create register pipe\n");
     return 1;
   }
   
@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
 
   int register_pipe = open(reg_pipe_path, O_RDWR);
   if (register_pipe < 0) {
-    fprintf(stderr, "Failed to open register pipe\n");
+    perror("Failed to open register pipe\n");
     return 1;
   }
 
@@ -96,7 +96,7 @@ int main(int argc, char* argv[]) {
     if ((read_status = safe_read(register_pipe, setup_buffer, SETUP_REQUEST_BUFSIZ)) < 0) {
       if (errno == EINTR && usr1_sig) {
         usr1_sig = 0;
-        if (ems_sigusr1_action(STDOUT_FILENO))
+        if (ems_sigusr1_action())
           fprintf(stderr, "Failed executing USR1 action\n");
       } else if (errno == EINTR && terminate) {
         break;

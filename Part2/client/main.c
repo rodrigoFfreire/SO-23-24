@@ -47,6 +47,7 @@ int main(int argc, char* argv[]) {
     size_t num_rows, num_columns, num_coords;
     unsigned int delay = 0;
     size_t xs[MAX_RESERVATION_SIZE], ys[MAX_RESERVATION_SIZE];
+    int return_value;
 
     switch (get_next(in_fd)) {
       case CMD_CREATE:
@@ -55,7 +56,8 @@ int main(int argc, char* argv[]) {
           continue;
         }
 
-        if (ems_create(event_id, num_rows, num_columns)) fprintf(stderr, "Failed to create event\n");
+        return_value = ems_create(event_id, num_rows, num_columns);
+        fprintf(stderr, "CREATE command returned %d\n", return_value);
         break;
 
       case CMD_RESERVE:
@@ -66,7 +68,8 @@ int main(int argc, char* argv[]) {
           continue;
         }
 
-        if (ems_reserve(event_id, num_coords, xs, ys)) fprintf(stderr, "Failed to reserve seats\n");
+        return_value = ems_reserve(event_id, num_coords, xs, ys);
+        fprintf(stderr, "RESERVE command returned %d\n", return_value);
         break;
 
       case CMD_SHOW:
@@ -75,11 +78,13 @@ int main(int argc, char* argv[]) {
           continue;
         }
 
-        if (ems_show(out_fd, event_id)) fprintf(stderr, "Failed to show event\n");
+        return_value = ems_show(out_fd, event_id);
+        fprintf(stderr, "SHOW command returned %d\n", return_value);
         break;
 
       case CMD_LIST_EVENTS:
-        if (ems_list_events(out_fd)) fprintf(stderr, "Failed to list events\n");
+        return_value = ems_list_events(out_fd);
+        fprintf(stderr, "LIST command returned %d\n", return_value);
         break;
 
       case CMD_WAIT:

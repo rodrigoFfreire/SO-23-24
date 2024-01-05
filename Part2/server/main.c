@@ -95,9 +95,9 @@ int main(int argc, char* argv[]) {
     char setup_buffer[SETUP_REQUEST_BUFSIZ] = {0};
     if ((read_status = safe_read(register_pipe, setup_buffer, SETUP_REQUEST_BUFSIZ)) < 0) {
       if (errno == EINTR && usr1_sig) {
-        usr1_sig = 0;
         if (ems_sigusr1_action())
           fprintf(stderr, "Failed executing USR1 action\n");
+        usr1_sig = 0;
       } else if (errno == EINTR && terminate) {
         break;
       } else {

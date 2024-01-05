@@ -193,11 +193,6 @@ int ems_show(int out_fd, unsigned int event_id) {
     return 1;
   }
 
-  if (pthread_mutex_lock(&event->mutex) != 0) {
-    fprintf(stderr, "Error locking mutex\n");
-    return 1;
-  }
-
   size_t event_size[2] = {event->rows, event->cols};
   if (safe_write(out_fd, &event_size, 2 * sizeof(size_t)) < 0) {
     perror("Error writing to file descriptor");
@@ -209,7 +204,6 @@ int ems_show(int out_fd, unsigned int event_id) {
     return 1;
   }
 
-  pthread_mutex_unlock(&event->mutex);
   return 0;
 }
 

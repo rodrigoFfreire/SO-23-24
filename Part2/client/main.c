@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 
 #include "api.h"
 #include "common/constants.h"
@@ -99,7 +100,8 @@ int main(int argc, char* argv[]) {
 
         if (delay > 0) {
           printf("Waiting...\n");
-          sleep(delay);
+          struct timespec delay_spec = {delay / 1000, (delay % 1000) * 1000000};
+          nanosleep(&delay_spec, NULL);
         }
         break;
 

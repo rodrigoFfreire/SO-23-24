@@ -179,7 +179,7 @@ void *connect_clients(void *args) {
       if (job_status == CLIENT_FAILED)
         fprintf(stderr, "Failed communicating with client\n");
       else if (job_status == CLIENT_UNRESPONSIVE)
-        fprintf(stderr, "Client is unresponsive. Terminating Session...\n", session_id);
+        fprintf(stderr, "Client is unresponsive. Terminating Session...\n");
 
       close(resp_pipe);
       close(req_pipe);

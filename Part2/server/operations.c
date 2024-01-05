@@ -275,13 +275,12 @@ int ems_sigusr1_action() {
   while (1) {
     curr_event = current->event;
 
-    printf("Event: %u\n", curr_event->id);
-
     if (pthread_mutex_lock(&curr_event->mutex) != 0) {
       fprintf(stderr, "Error locking mutex\n");
       return 1;
     }
 
+    printf("Event: %u\n", curr_event->id);
     for (size_t i = 1; i <= curr_event->rows; i++) {
       for (size_t j = 1; j <= curr_event->cols; j++) {
         printf("%u", curr_event->data[seat_index(curr_event, i, j)]);

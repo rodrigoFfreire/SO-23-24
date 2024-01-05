@@ -22,7 +22,12 @@ int check_termination(ConnectionQueue_t *queue) {
   return 0;
 }
 
-int read_requests(int req_fd, int resp_fd) {
+/// Listens for the client's requests, executes the appropriate commands and responds back
+/// @param req_fd File descriptor of the request pipe
+/// @param resp_fd File descriptor of the response pipe
+/// @return `CLIENT_JOB_SUCCESSS` if successful, `CLIENT_FAILED` on error,
+/// `CLIENT_UNRESPONSIVE` if the client has closed its pipes
+int handle_requests(int req_fd, int resp_fd) {
   sigset_t mask;
   sigemptyset(&mask);
   sigaddset(&mask, SIGPIPE);
@@ -30,7 +35,7 @@ int read_requests(int req_fd, int resp_fd) {
   
   if (pthread_sigmask(SIG_BLOCK, &mask, NULL)) {
     fprintf(stderr, "Failed creating signal mask\n");
-    return JOB_FAILED;
+    return CLIENT_FAILED;
   }
 
   char op = OP_NONE;
@@ -40,8 +45,8 @@ int read_requests(int req_fd, int resp_fd) {
   while (op != OP_QUIT) {
     if ((io_status = safe_read(req_fd, &op, sizeof(char))) <= 0) {
       if (!io_status)
-        return UNRESPONSIVE_CLIENT;
-      return JOB_FAILED;
+        return CLIENT_UNRESPONSIVE;
+      return CLIENT_FAILED;
     }
 
     unsigned int event_id;
@@ -55,22 +60,22 @@ int read_requests(int req_fd, int resp_fd) {
     case OP_CREATE:
       if ((io_status = safe_read(req_fd, &event_id, sizeof(int))) <= 0) {
         if (!io_status)
-          return UNRESPONSIVE_CLIENT;
-        return JOB_FAILED;
+          return CLIENT_UNRESPONSIVE;
+        return CLIENT_FAILED;
       }
 
       if ((io_status = safe_read(req_fd, num_matrix, 2 * sizeof(size_t))) <= 0) {
         if (!io_status)
-          return UNRESPONSIVE_CLIENT;
-        return JOB_FAILED;
+          return CLIENT_UNRESPONSIVE;
+        return CLIENT_FAILED;
       }
 
       response_status = ems_create(event_id, num_matrix[0], num_matrix[1]);
       
       if (safe_write(resp_fd, &response_status, sizeof(int)) < 0) {
         if (errno == EPIPE)
-          return UNRESPONSIVE_CLIENT;
-        return JOB_FAILED;
+          return CLIENT_UNRESPONSIVE;
+        return CLIENT_FAILED;
       }
       
       break;
@@ -78,34 +83,34 @@ int read_requests(int req_fd, int resp_fd) {
     case OP_RESERVE:
       if ((io_status = safe_read(req_fd, &event_id, sizeof(int))) <= 0) {
         if (!io_status)
-          return UNRESPONSIVE_CLIENT;
-        return JOB_FAILED;
+          return CLIENT_UNRESPONSIVE;
+        return CLIENT_FAILED;
       }
 
       if ((io_status = safe_read(req_fd, &num_seats, sizeof(size_t))) <= 0) {
         if (!io_status)
-          return UNRESPONSIVE_CLIENT;
-        return JOB_FAILED;
+          return CLIENT_UNRESPONSIVE;
+        return CLIENT_FAILED;
       }
 
       if ((io_status = safe_read(req_fd, xs, sizeof(size_t) * MAX_RESERVATION_SIZE)) <= 0) {
         if (!io_status)
-          return UNRESPONSIVE_CLIENT;
-        return JOB_FAILED;
+          return CLIENT_UNRESPONSIVE;
+        return CLIENT_FAILED;
       }
 
       if ((io_status = safe_read(req_fd, ys, sizeof(size_t) * MAX_RESERVATION_SIZE)) <= 0) {
         if (!io_status)
-          return UNRESPONSIVE_CLIENT;
-        return JOB_FAILED;
+          return CLIENT_UNRESPONSIVE;
+        return CLIENT_FAILED;
       }
 
       response_status = ems_reserve(event_id, num_seats, xs, ys);
 
       if (safe_write(resp_fd, &response_status, sizeof(int)) < 0) {
         if (errno == EPIPE)
-          return UNRESPONSIVE_CLIENT;
-        return JOB_FAILED;
+          return CLIENT_UNRESPONSIVE;
+        return CLIENT_FAILED;
       }
 
       break;
@@ -113,16 +118,16 @@ int read_requests(int req_fd, int resp_fd) {
     case OP_SHOW:
       if ((io_status = safe_read(req_fd, &event_id, sizeof(int))) <= 0) {
         if (!io_status)
-          return UNRESPONSIVE_CLIENT;
-        return JOB_FAILED;
+          return CLIENT_UNRESPONSIVE;
+        return CLIENT_FAILED;
       }
 
       response_status = ems_show(resp_fd, event_id);
 
       if (safe_write(resp_fd, &response_status, sizeof(int)) < 0) {
         if (errno == EPIPE)
-          return UNRESPONSIVE_CLIENT;
-        return JOB_FAILED;
+          return CLIENT_UNRESPONSIVE;
+        return CLIENT_FAILED;
       }
 
       break;
@@ -132,8 +137,8 @@ int read_requests(int req_fd, int resp_fd) {
 
       if (safe_write(resp_fd, &response_status, sizeof(int)) < 0) {
         if (errno == EPIPE)
-          return UNRESPONSIVE_CLIENT;
-        return JOB_FAILED;
+          return CLIENT_UNRESPONSIVE;
+        return CLIENT_FAILED;
       }
 
       break;
@@ -143,7 +148,7 @@ int read_requests(int req_fd, int resp_fd) {
     }
   }
   
-  return JOB_SUCCESS;
+  return CLIENT_SUCCESS;
 }
 
 void *connect_clients(void *args) {
@@ -172,7 +177,7 @@ void *connect_clients(void *args) {
     pthread_mutex_unlock(&queue->queue_lock);
 
     if (connection == NULL) {
-      fprintf(stderr, "Failed to accept client connection\n");
+      fprintf(stderr, "Invalid connection\n");
       continue;
     }
 
@@ -184,28 +189,28 @@ void *connect_clients(void *args) {
 
     int resp_pipe = open(resp_pipe_path, O_WRONLY);
     if (resp_pipe < 0) {
-      fprintf(stderr, "Failed opening response pipe\n");
+      perror("Failed opening response pipe");
       continue;
     }
 
     if (safe_write(resp_pipe, &session_id, sizeof(int)) < 0) {
-      fprintf(stderr, "Failed to send response to client\n");
+      perror("Failed to send session id to client");
       close(resp_pipe);
       continue;
     }
 
     int req_pipe = open(req_pipe_path, O_RDONLY);
     if (req_pipe < 0) {
-      fprintf(stderr, "Failed opening request pipe\n");
+      perror("Failed opening request pipe");
       close(resp_pipe);
       continue;
     }
 
-    int job_status = read_requests(req_pipe, resp_pipe);
+    int job_status = handle_requests(req_pipe, resp_pipe);
     if (job_status) {
-      if (job_status == JOB_FAILED)
-        fprintf(stderr, "Failed reading client requests\n");
-      else if (job_status == UNRESPONSIVE_CLIENT)
+      if (job_status == CLIENT_FAILED)
+        fprintf(stderr, "Failed communicating with client\n");
+      else if (job_status == CLIENT_UNRESPONSIVE)
         fprintf(stderr, "\x1b[1;91m[WORKER %.2u] Client is unresponsive. Terminating Session...\x1b[0m\n", session_id);
 
       close(resp_pipe);

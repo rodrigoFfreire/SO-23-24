@@ -50,7 +50,7 @@ int ems_terminate() {
   }
 
   if (pthread_rwlock_wrlock(&event_list->rwl) != 0) {
-    fprintf(stderr, "Error locking list rwl\n");
+    perror("Error locking list rwl\n");
     return 1;
   }
 
@@ -66,7 +66,7 @@ int ems_create(unsigned int event_id, size_t num_rows, size_t num_cols) {
   }
 
   if (pthread_rwlock_wrlock(&event_list->rwl) != 0) {
-    fprintf(stderr, "Error locking list rwl\n");
+    perror("Error locking list rwl\n");
     return 1;
   }
 
@@ -291,10 +291,9 @@ int ems_sigusr1_action() {
     }
     pthread_mutex_unlock(&curr_event->mutex);
 
-    if (current == to) {
+    if (current == to)
       break;
-    }
-
+      
     current = current->next;
   }
 

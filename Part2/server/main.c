@@ -25,7 +25,6 @@ void sig_handler(int sig) {
     usr1_sig = 1;
 }
 
-
 int main(int argc, char* argv[]) {
   struct sigaction sa;
   sa.sa_handler = &sig_handler;
@@ -52,19 +51,24 @@ int main(int argc, char* argv[]) {
 
   char reg_pipe_path[MAX_PIPE_NAME_SIZE] = {0};
   strcpy(reg_pipe_path, argv[1]);
-  if (mkfifo(reg_pipe_path, 0640) < 0) {
-    perror("Failed to create register pipe\n");
+  if (mkfifo(reg_pipe_path, 0666) < 0) {
+    perror("Failed to create register pipe");
     return 1;
   }
   
   if (ems_init(state_access_delay_us)) {
-    fprintf(stderr, "Failed to initialize EMS\n");
+    if (unlink(reg_pipe_path) < 0)
+      perror("Failed to unlink register pipe");
+
     return 1;
   }
 
   ConnectionQueue_t connect_queue;
   if (init_queue(&connect_queue) != 0) {
-    fprintf(stderr, "Failed to initialize queue\n");
+    if (unlink(reg_pipe_path) < 0)
+      perror("Failed to unlink register pipe");
+
+    ems_terminate();
     return 1;
   }
 
@@ -76,14 +80,24 @@ int main(int argc, char* argv[]) {
     sessions[i].queue = &connect_queue;
 
     if (pthread_create(&worker_threads[i], NULL, connect_clients, (void*)&sessions[i]) != 0) {
+      if (unlink(reg_pipe_path) < 0)
+        perror("Failed to unlink register pipe");
+      
       fprintf(stderr, "Failed to dispatch worker thread\n");
+      ems_terminate();
+      free_queue(&connect_queue);
       return 1;
     }
   }
 
   int register_pipe = open(reg_pipe_path, O_RDWR);
   if (register_pipe < 0) {
+    if (unlink(reg_pipe_path) < 0)
+      perror("Failed to unlink register pipe");
+    
     perror("Failed to open register pipe\n");
+    ems_terminate();
+    free_queue(&connect_queue);
     return 1;
   }
 
@@ -98,9 +112,11 @@ int main(int argc, char* argv[]) {
         if (ems_sigusr1_action())
           fprintf(stderr, "Failed executing USR1 action\n");
         usr1_sig = 0;
-      } else if (errno == EINTR && terminate) {
+      } 
+      else if (errno == EINTR && terminate) {
         break;
-      } else {
+      } 
+      else {
         fprintf(stderr, "Failed reading from register pipe\n");
       }
       continue;
@@ -111,7 +127,7 @@ int main(int argc, char* argv[]) {
 
     if (enqueue_connection(&connect_queue, setup_buffer)) {
       fprintf(stderr, "Failed adding new connection request to queue\n");
-      return 1;
+      continue;
     }
   }
 

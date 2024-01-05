@@ -4,20 +4,19 @@
 #include "queue.h"
 #include "common/constants.h"
 
-#define CREATE_BUFSIZE ((size_t) 3 * sizeof(size_t))
-#define RESERVE_BUFSIZE ((size_t) sizeof(size_t) * (2 * MAX_RESERVATION_SIZE + 2))
-#define SHOW_BUFSIZE ((size_t) 2 * sizeof(int))
-
-#define JOB_SUCCESS 0
-#define JOB_FAILED 1 
-#define UNRESPONSIVE_CLIENT 2
+#define CLIENT_SUCCESS 0
+#define CLIENT_FAILED 1 
+#define CLIENT_UNRESPONSIVE 2
 
 typedef struct Session {
     ConnectionQueue_t *queue;
     unsigned int session_id;
 } Session_t;
 
-
+/// Main function that runs on the worker threads. Accepts a connection with a client
+/// and executes its commands.
+/// @param args Thread argument. A `Session_t` struct is passed as argument.
+/// @return `NULL`
 void *connect_clients(void *args);
 
 

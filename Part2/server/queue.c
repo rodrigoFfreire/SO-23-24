@@ -9,10 +9,23 @@
 #include "common/constants.h"
 
 int init_queue(ConnectionQueue_t *queue) {
-  if (pthread_mutex_init(&queue->queue_lock, NULL) != 0 || 
-      pthread_rwlock_init(&queue->termination_lock, NULL) != 0 ||
-      pthread_cond_init(&queue->available_connection, NULL) != 0)
+  if (pthread_mutex_init(&queue->queue_lock, NULL) != 0) {
+    fprintf(stderr, "Failed to initialize queue lock");
     return 1;
+  }
+  
+  if (pthread_rwlock_init(&queue->termination_lock, NULL) != 0) {
+    fprintf(stderr, "Failed to initialize termination lock");
+    pthread_mutex_destroy(&queue->queue_lock);
+    return 1;
+  }
+
+  if (pthread_cond_init(&queue->available_connection, NULL) != 0) {
+    fprintf(stderr, "Failed to initialize condition variable");
+    pthread_mutex_destroy(&queue->queue_lock);
+    pthread_rwlock_destroy(&queue->termination_lock);
+    return 1;
+  }
 
   queue->front = queue->rear = NULL;
   queue->terminate = 0;
@@ -31,7 +44,7 @@ void free_queue(ConnectionQueue_t *queue) {
   while (curr_node != NULL) {
     next_node = curr_node->next;
     free(curr_node);
-    fprintf(stdout, "\x1b[1;91m[SERVER]: Rejected Connection [Closing Server]\n");
+    fprintf(stderr, "\x1b[1;91m[SERVER]: Rejected Connection [Closing Server]\n");
     curr_node = next_node;
   }
   queue->front = queue->rear = NULL;
@@ -53,7 +66,7 @@ int enqueue_connection(ConnectionQueue_t *queue, const char* setup_buffer) {
   memcpy(new_connection->resp_pipe_path, setup_buffer + 1 + MAX_PIPE_NAME_SIZE, MAX_PIPE_NAME_SIZE);
 
   if (pthread_mutex_lock(&queue->queue_lock) != 0) {
-    fprintf(stderr, "Failed locking queue\n");
+    fprintf(stderr, "Failed locking queue");
     free(new_connection);
     return 1;
   }

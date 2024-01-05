@@ -19,8 +19,8 @@ int ems_setup(char const* req_pipe_path, char const* resp_pipe_path, char const*
   strcpy(request_buff + sizeof(char), req_pipe_path);
   strcpy(request_buff + sizeof(char) * (MAX_PIPE_NAME_SIZE + 1), resp_pipe_path);
 
-  strcpy(pipes.req_pipe, req_pipe_path);
-  strcpy(pipes.resp_pipe, resp_pipe_path);
+  strncpy(pipes.req_pipe, req_pipe_path, MAX_PIPE_NAME_SIZE);
+  strncpy(pipes.resp_pipe, resp_pipe_path, MAX_PIPE_NAME_SIZE);
 
   if (mkfifo(req_pipe_path, 0640)) {
     perror("Could not create response pipe");
@@ -83,6 +83,7 @@ int close_pipes(void) {
     perror("Failed to unlink response pipe");
     return 1;
   }
+  return 0;
 }
 
 int ems_quit(void) {

@@ -5,8 +5,8 @@
 #include <stddef.h>
 
 typedef struct ConnectionPipes {
-  const char* req_pipe[MAX_PIPE_NAME_SIZE];
-  const char* resp_pipe[MAX_PIPE_NAME_SIZE];
+  char req_pipe[MAX_PIPE_NAME_SIZE];
+  char resp_pipe[MAX_PIPE_NAME_SIZE];
   int req_fd;
   int resp_fd;
 } ConnectionPipes_t;

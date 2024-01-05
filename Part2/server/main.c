@@ -28,6 +28,7 @@ void sig_handler(int sig) {
 int main(int argc, char* argv[]) {
   struct sigaction sa;
   sa.sa_handler = &sig_handler;
+  sa.sa_flags = 0;
   sigaction(SIGINT, &sa, NULL);
   sigaction(SIGUSR1, &sa, NULL);
 

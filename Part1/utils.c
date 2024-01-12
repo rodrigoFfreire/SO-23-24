@@ -25,11 +25,7 @@ int safe_write(int out_fd, const void *buffer, size_t n_bytes) {
       fprintf(stderr, "Could not write to .out file\n");
       return 1;
     }
-<<<<<<< HEAD
     n_bytes -= (size_t) wbytes;
-=======
-    n_bytes -= (size_t)wbytes;
->>>>>>> ex3
     completed_bytes += wbytes;
   }
   return EXIT_SUCCESS;

@@ -17,7 +17,9 @@ We can interact with it by:
 For a more detailed explanation make sure to read the [Requirements](./Projeto%20SO%20-%20Parte%201.pdf)
 
 This interaction occurs via command files. In [Part 1](./Part1) the program creates a subprocess for each command file.
-Then each process runs a maximum number of threads that execute commands.<br> In this part commands are not ran in order! This will cause unexpected behaviour. Part 1 is meant to demonstrate a bad example on how to use multiprocessing tools. <br>
+Then each process runs a maximum number of threads that execute commands.<br>
+Each process however is associated to a unique instance of the event manager (One system for each file). <br>
+Moreover, in this part commands are not ran in order! This will cause unexpected behaviour. This is meant to demonstrate when not to use multiprocessing. <br>
 
 Jump to [Job Files](#job-files) to learn how to setup these files or [Running the Program](#run) to learn how to run this program.
 
@@ -31,10 +33,10 @@ Jump to [Job Files](#job-files) to learn how to setup these files or [Running th
 | ```WAIT <delay_ms> [thread_id]``` | If `thread_id` is not specified all threads wait for `delay_ms` otherwise only the specified thread waits |
 | ```BARRIER``` | Program will wait for all threads to finish processing their command and restarts a new round of processing |
 | ```HELP``` | Displays command syntax |
-| ```#``` | Indicates a comment will be ignored |
+| ```#``` | Indicates a comment (ignored) |
 > [!IMPORTANT]
 > More information about the command arguments here
-<details open>
+<details>
 <summary>Argument info</summary>
 
 | Argument | Type |
@@ -46,7 +48,7 @@ Jump to [Job Files](#job-files) to learn how to setup these files or [Running th
 | ```delay_ms``` | `ulong` |
 | ```thread_id``` | `uint` - $thread\\_id \in \\{0..max\\_threads\\}$ |
 
-> `max_threads` is maximum number of threads a process can read. It is specified when running the program.
+> The number of reservations per command is limited by [MAX_RESERVATION_SIZE](./src/constants.h)
 
 </details>
 
@@ -54,13 +56,15 @@ Jump to [Job Files](#job-files) to learn how to setup these files or [Running th
 First, create a directory for our job files. It can be something like `jobs`.<br>
 Add a new job file to the directory. It should be named like this: `<job_name>.jobs` <br>
 You can look at this [example](./example-job.jobs)
+> [!TIP]
+> You can change the extension name by changing `JOBS_FILE_EXTENSION` in [constants.h](./src/constants.h)
 
 ## Running the Program <a name="run"></a>
 Here is the program syntax:
 ```bash
 ./ems <jobs_dir> <max_processes> <max_threads> [access_delay]
 ```
-- `jobs_dir_path` -> specifies the job directory
-- `max_processes` -> maximum number of allowed processes running
-- `max_threads` -> maximum number of threads running per process
-- `access_delay` -> **OPTIONAL:** Adds delay when accessing internal variables
+- `jobs_dir_path` -> Jobs directory
+- `max_processes` -> Maximum number of allowed processes running
+- `max_threads` -> Maximum number of threads running per process
+- `access_delay` -> **OPTIONAL:** Adds delay when accessing data

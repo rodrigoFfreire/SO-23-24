@@ -51,6 +51,9 @@ This is the syntax of the server process:
 - `access_delay` -> **OPTIONAL:** Adds delay when accessing data
 
 > The server creates the registration pipe.
+
+> [!TIP]
+> You can change the maximum amount of sessions by changing [MAX_SESSION_COUNT](./src/common/constants.h)
 ### Signals
 It was required to demonstrate signals by displaying some information about the current status of the server with `SIGUSR1`. <br>
 You can send that signal to see what happens.

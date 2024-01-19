@@ -9,5 +9,5 @@ test
 # Binaries, objects, ...
 *.dSYM
 *.o
-ems
 client
+!client/

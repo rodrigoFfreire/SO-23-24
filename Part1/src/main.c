@@ -139,7 +139,7 @@ int main(int argc, char *argv[]) {
       continue;
 
     char *ext = strchr(dir_entry->d_name, '.');
-    if (NULL == ext || strcmp(JOBS_FILE_EXTENSION, strchr(dir_entry->d_name, '.')))
+    if (NULL == ext || strncmp(JOBS_FILE_EXTENSION, strchr(dir_entry->d_name, '.'), strlen(JOBS_FILE_EXTENSION)))
       continue;
 
     char job_filepath[256];
